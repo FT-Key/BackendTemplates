@@ -1,3 +1,36 @@
+# Node modules
 node_modules/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Entornos y configs
 .env
+.env.*  # en caso de múltiples entornos como .env.development
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# Salidas temporales o build (si algún día usás TS o bundlers)
 dist/
+build/
+
+# Test coverage (si usás herramientas como `nyc` o `jest --coverage`)
+coverage/
+
+# Archivos de ejemplo si no deben subirse
+*.example.*
+
+# Archivos de bases de datos en desarrollo (por si los guardás localmente)
+*.sqlite
+*.sqlite3
+
+# Sistema de cache / lint
+.eslintcache
