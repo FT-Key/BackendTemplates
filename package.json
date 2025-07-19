@@ -14,7 +14,8 @@
   "description": "",
   "dependencies": {
     "dotenv": "^17.2.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "path-to-regexp": "^8.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
