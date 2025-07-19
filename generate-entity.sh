@@ -41,20 +41,29 @@ export class $EntityPascal {
   /**
    * @param {Object} params
    * @param {string} params.id
-   * @param {string} params.name
    * @param {boolean} [params.active]
+   * @param {Date} [params.createdAt]
+   * @param {Date} [params.updatedAt]
+   * @param {Date|null} [params.deletedAt]
+   * @param {string|null} [params.ownedBy]
    */
-  constructor({ id, name, active = true }) {
+  constructor({ id, active = true, createdAt = new Date(), updatedAt = new Date(), deletedAt = null, ownedBy = null }) {
     this.id = id;
-    this.name = name;
     this.active = active;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.deletedAt = deletedAt;
+    this.ownedBy = ownedBy;
   }
 
   toJSON() {
     return {
       id: this.id,
-      name: this.name,
-      active: this.active
+      active: this.active,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      deletedAt: this.deletedAt,
+      ownedBy: this.ownedBy
     };
   }
 }
@@ -66,8 +75,8 @@ validate_file="src/domain/$entity/validate-$entity.js"
 if confirm_action "¿Generar función validate ($validate_file)?"; then
   cat <<EOF >"$validate_file"
 export function validate${EntityPascal}(data) {
-  if (!data.name) throw new Error('Name is required');
-  // Agregar más validaciones según sea necesario
+  if (!data.id) throw new Error('ID is required');
+  // Puedes agregar más validaciones si deseas (por ejemplo, formatos de fecha)
   return true;
 }
 EOF
