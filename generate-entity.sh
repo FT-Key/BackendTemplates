@@ -1,11 +1,21 @@
 #!/bin/bash
+set -e
 
 # ----------------------------------------------
-# Modo automático con -y
+# Flags
 AUTO_CONFIRM=false
-if [[ "$1" == "-y" ]]; then
-  AUTO_CONFIRM=true
-fi
+USE_JSON=false
+
+for arg in "$@"; do
+  case $arg in
+    -y)
+      AUTO_CONFIRM=true
+      ;;
+    --json)
+      USE_JSON=true
+      ;;
+  esac
+done
 
 confirm_action() {
   local prompt="$1"
@@ -19,23 +29,94 @@ confirm_action() {
 }
 
 # ----------------------------------------------
-# Pedir nombre de entidad
-read -r -p "Nombre de la entidad (ej. user, product): " entity
+# Obtener entidad desde JSON o por input
+if $USE_JSON; then
+  # Verificar jq SOLO si se usa JSON
+  command -v jq >/dev/null 2>&1 || { echo >&2 "❌ Error: jq no está instalado. Instalalo con 'sudo apt install jq' o similar."; exit 1; }
+
+  SCHEMA_JSON="./entity-schema.json"
+  if [[ ! -f "$SCHEMA_JSON" ]]; then
+    echo "❌ No se encontró entity-schema.json en el directorio actual."
+    exit 1
+  fi
+  entity=$(jq -r '.name' "$SCHEMA_JSON")
+  fields=$(jq -c '.fields' "$SCHEMA_JSON")
+  methods=$(jq -c '.methods // []' "$SCHEMA_JSON")
+else
+  read -r -p "Nombre de la entidad (ej. user, product): " entity
+  fields='[]'
+  methods='[]'
+fi
+
 EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
+echo "🛠 Generando entidad '$entity'..."
 
-echo "Generando estructura para entidad '$entity'..."
-
-# Carpetas base
+# ----------------------------------------------
+# Crear carpetas base
 mkdir -p "src/domain/$entity"
 mkdir -p "src/application/$entity/use-cases"
 mkdir -p "src/infrastructure/$entity"
 mkdir -p "src/interfaces/http/$entity"
 mkdir -p "tests/application/$entity"
 
+# ----------------------------------------------
 # 1. DOMAIN
 domain_file="src/domain/$entity/$entity.js"
 if confirm_action "¿Inicializar clase Domain ($domain_file)?"; then
-  cat <<EOF >"$domain_file"
+
+  if $USE_JSON; then
+    # Construcción dinámica desde el JSON
+    constructor_params=""
+    constructor_body=""
+    getters=""
+    setters=""
+    tojson=""
+
+    for field_json in $(echo "$fields" | jq -c '.[]'); do
+      name=$(echo "$field_json" | jq -r '.name')
+      default=$(echo "$field_json" | jq -r '.default // "undefined"')
+      required=$(echo "$field_json" | jq -r '.required')
+
+      constructor_params+="${name}, "
+      if [[ "$required" == "true" && "$default" == "undefined" ]]; then
+        constructor_body+="    if (!${name}) throw new Error('${name} is required');"$'\n'
+      fi
+      if [[ "$default" != "undefined" ]]; then
+        constructor_body+="    this._${name} = ${name} !== undefined ? ${name} : ${default};"$'\n'
+      else
+        constructor_body+="    this._${name} = ${name};"$'\n'
+      fi
+
+      getters+="  get ${name}() { return this._${name}; }"$'\n'
+      setters+="  set ${name}(value) { this._${name} = value; this._touchUpdatedAt(); }"$'\n'
+      tojson+="      ${name}: this._${name},\n"
+    done
+
+    cat <<EOF >"$domain_file"
+export class $EntityPascal {
+  /**
+   * @param {Object} params
+   */
+  constructor({ ${constructor_params%??} }) {
+$constructor_body  }
+
+$getters
+$setters
+
+  _touchUpdatedAt() {
+    this._updatedAt = new Date();
+  }
+
+  toJSON() {
+    return {
+$tojson    };
+  }
+}
+EOF
+
+  else
+    # Modo clásico sin JSON
+    cat <<EOF >"$domain_file"
 export class $EntityPascal {
   /**
    * @param {Object} params
@@ -57,40 +138,15 @@ export class $EntityPascal {
     this._ownedBy = ownedBy;
   }
 
-  // Getters
-  get id() {
-    return this._id;
-  }
+  get id() { return this._id; }
+  get active() { return this._active; }
+  get createdAt() { return this._createdAt; }
+  get updatedAt() { return this._updatedAt; }
+  get deletedAt() { return this._deletedAt; }
+  set deletedAt(value) { this._deletedAt = value; this._touchUpdatedAt(); }
+  get ownedBy() { return this._ownedBy; }
+  set ownedBy(value) { this._ownedBy = value; this._touchUpdatedAt(); }
 
-  get active() {
-    return this._active;
-  }
-
-  get createdAt() {
-    return this._createdAt;
-  }
-
-  get updatedAt() {
-    return this._updatedAt;
-  }
-
-  get deletedAt() {
-    return this._deletedAt;
-  }
-  set deletedAt(value) {
-    this._deletedAt = value;
-    this._touchUpdatedAt();
-  }
-
-  get ownedBy() {
-    return this._ownedBy;
-  }
-  set ownedBy(value) {
-    this._ownedBy = value;
-    this._touchUpdatedAt();
-  }
-
-  // Métodos para activar / desactivar
   activate() {
     this._active = true;
     this._touchUpdatedAt();
@@ -101,22 +157,17 @@ export class $EntityPascal {
     this._touchUpdatedAt();
   }
 
-  // Método para actualizar propiedades de forma controlada
   update(data) {
     if (data.deletedAt !== undefined) this.deletedAt = data.deletedAt;
     if (data.ownedBy !== undefined) this.ownedBy = data.ownedBy;
-    if (data.active !== undefined) {
-      this._active = data.active;
-    }
+    if (data.active !== undefined) this._active = data.active;
     this._touchUpdatedAt();
   }
 
-  // Actualizar updatedAt al modificar algo
   _touchUpdatedAt() {
     this._updatedAt = new Date();
   }
 
-  // Exportar a JSON
   toJSON() {
     return {
       id: this._id,
@@ -129,18 +180,30 @@ export class $EntityPascal {
   }
 }
 EOF
+  fi
+
+  echo "✅ Clase generada: $domain_file"
 fi
 
+# ----------------------------------------------
 # 1.5 VALIDATE (src/domain/$entity/validate-$entity.js)
 validate_file="src/domain/$entity/validate-$entity.js"
-if confirm_action "¿Generar función validate ($validate_file)?"; then
+if confirm_action "¿Generar validate ($validate_file)?"; then
+  validation_lines=""
+  for field_json in $(echo "$fields" | jq -c '.[]'); do
+    name=$(echo "$field_json" | jq -r '.name')
+    required=$(echo "$field_json" | jq -r '.required')
+    if [[ "$required" == "true" ]]; then
+      validation_lines+="  if (!data.$name) throw new Error('$name is required');"$'\n'
+    fi
+  done
+
   cat <<EOF >"$validate_file"
 export function validate${EntityPascal}(data) {
-  if (!data.id) throw new Error('ID is required');
-  // Puedes agregar más validaciones si deseas (por ejemplo, formatos de fecha)
-  return true;
+$validation_lines  return true;
 }
 EOF
+  echo "✅ Validación generada: $validate_file"
 fi
 
 # 1.6 FACTORY (src/domain/$entity/$entity-factory.js)
