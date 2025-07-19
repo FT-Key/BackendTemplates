@@ -22,7 +22,6 @@ confirm_action() {
 # Pedir nombre de entidad
 read -r -p "Nombre de la entidad (ej. user, product): " entity
 EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
-# EntityCamel="$(tr '-' '_' <<<"$entity")"
 
 echo "Generando estructura para entidad '$entity'..."
 
@@ -102,6 +101,16 @@ export class $EntityPascal {
     this._touchUpdatedAt();
   }
 
+  // Método para actualizar propiedades de forma controlada
+  update(data) {
+    if (data.deletedAt !== undefined) this.deletedAt = data.deletedAt;
+    if (data.ownedBy !== undefined) this.ownedBy = data.ownedBy;
+    if (data.active !== undefined) {
+      this._active = data.active;
+    }
+    this._touchUpdatedAt();
+  }
+
   // Actualizar updatedAt al modificar algo
   _touchUpdatedAt() {
     this._updatedAt = new Date();
@@ -178,7 +187,13 @@ export class InMemory${EntityPascal}Repository {
   }
 
   async save(item) {
-    this.items.push(item);
+    const index = this.items.findIndex(i => i.id === item.id);
+    if (index === -1) {
+      this.items.push(item);
+    } else {
+      // Actualizar manteniendo instancia de dominio
+      this.items[index] = item;
+    }
     return item;
   }
 
@@ -191,10 +206,12 @@ export class InMemory${EntityPascal}Repository {
   }
 
   async update(id, data) {
-    const index = this.items.findIndex(i => i.id === id);
-    if (index === -1) return null;
-    this.items[index] = { ...this.items[index], ...data };
-    return this.items[index];
+    const item = await this.findById(id);
+    if (!item) return null;
+    // Usar método update del dominio para respetar lógica y setters
+    item.update(data);
+    await this.save(item);
+    return item;
   }
 
   async deleteById(id) {
@@ -205,11 +222,10 @@ export class InMemory${EntityPascal}Repository {
 
   async deactivateById(id) {
     const item = await this.findById(id);
-    if (item) {
-      item.active = false;
-      return item;
-    }
-    return null;
+    if (!item) return null;
+    item.deactivate(); // usar método de dominio
+    await this.save(item);
+    return item;
   }
 }
 EOF
