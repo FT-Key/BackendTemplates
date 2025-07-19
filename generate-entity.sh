@@ -1,11 +1,19 @@
 #!/bin/bash
+set -e
 
-# ----------------------------------------------
-# Modo automático con -y
 AUTO_CONFIRM=false
-if [[ "$1" == "-y" ]]; then
-  AUTO_CONFIRM=true
-fi
+USE_JSON=false
+
+for arg in "$@"; do
+  case $arg in
+  -y)
+    AUTO_CONFIRM=true
+    ;;
+  --json)
+    USE_JSON=true
+    ;;
+  esac
+done
 
 confirm_action() {
   local prompt="$1"
@@ -19,128 +27,208 @@ confirm_action() {
 }
 
 # ----------------------------------------------
-# Pedir nombre de entidad
-read -r -p "Nombre de la entidad (ej. user, product): " entity
+# Obtener entidad desde JSON o por input
+custom_fields='[]'
+
+if $USE_JSON; then
+  command -v jq >/dev/null 2>&1 || {
+    echo >&2 "❌ Error: jq no está instalado."
+    exit 1
+  }
+
+  SCHEMA_JSON="./entity-schema.json"
+  if [[ ! -f "$SCHEMA_JSON" ]]; then
+    echo "❌ No se encontró entity-schema.json en el directorio actual."
+    exit 1
+  fi
+  entity=$(jq -r '.name' "$SCHEMA_JSON")
+  custom_fields=$(jq -c '.fields' "$SCHEMA_JSON")
+  # AGREGAMOS ESTA LÍNEA PARA LEER TODO EL ESQUEMA
+  schema_content=$(cat "$SCHEMA_JSON")
+else
+  read -r -p "Nombre de la entidad (ej. user, product): " entity
+  schema_content='{}'
+fi
+
 EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
+echo "🛠 Generando entidad '$entity'..."
 
-echo "Generando estructura para entidad '$entity'..."
+# Campos genéricos
+base_fields='[
+  { "name": "id", "required": true },
+  { "name": "active", "default": true },
+  { "name": "createdAt", "default": "new Date()" },
+  { "name": "updatedAt", "default": "new Date()" },
+  { "name": "deletedAt", "default": null },
+  { "name": "ownedBy", "default": null }
+]'
 
-# Carpetas base
+# Crear archivos temporales para evitar problemas con <(...)
+tmp_base=$(mktemp)
+tmp_custom=$(mktemp)
+
+echo "$base_fields" >"$tmp_base"
+echo "$custom_fields" >"$tmp_custom"
+
+fields=$(jq -s '.[0] + .[1]' "$tmp_base" "$tmp_custom")
+
+rm "$tmp_base" "$tmp_custom"
+
+# ----------------------------------------------
+# Crear carpetas base
 mkdir -p "src/domain/$entity"
 mkdir -p "src/application/$entity/use-cases"
 mkdir -p "src/infrastructure/$entity"
 mkdir -p "src/interfaces/http/$entity"
 mkdir -p "tests/application/$entity"
 
+# ----------------------------------------------
 # 1. DOMAIN
-domain_file="src/domain/$entity/$entity.js"
-if confirm_action "¿Inicializar clase Domain ($domain_file)?"; then
-  cat <<EOF >"$domain_file"
-export class $EntityPascal {
-  /**
-   * @param {Object} params
-   * @param {string} params.id
-   * @param {boolean} [params.active]
-   * @param {Date} [params.createdAt]
-   * @param {Date} [params.updatedAt]
-   * @param {Date|null} [params.deletedAt]
-   * @param {string|null} [params.ownedBy]
-   */
-  constructor({ id, active = true, createdAt = new Date(), updatedAt = new Date(), deletedAt = null, ownedBy = null }) {
-    if (!id) throw new Error('$EntityPascal id is required');
+ENTITY_PASCAL="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
+DOMAIN_PATH="src/domain/$entity"
+mkdir -p "$DOMAIN_PATH"
+domain_file="$DOMAIN_PATH/$ENTITY_PASCAL.js"
 
-    this._id = id;
-    this._active = active;
-    this._createdAt = createdAt;
-    this._updatedAt = updatedAt;
-    this._deletedAt = deletedAt;
-    this._ownedBy = ownedBy;
-  }
+# Método más robusto para construir los arrays
+declare -a names
+declare -a defaults
+declare -a requireds
 
-  // Getters
-  get id() {
-    return this._id;
-  }
+# Obtener la cantidad de campos
+field_count=$(echo "$fields" | jq '. | length')
 
-  get active() {
-    return this._active;
-  }
+# Llenar arrays campo por campo
+for ((i = 0; i < field_count; i++)); do
+  names[i]=$(echo "$fields" | jq -r ".[$i].name")
+  defaults[i]=$(echo "$fields" | jq -r ".[$i].default // empty")
+  requireds[i]=$(echo "$fields" | jq -r ".[$i].required // false")
+done
 
-  get createdAt() {
-    return this._createdAt;
-  }
+# Procesar métodos si existen - CORREGIDO
+declare -a method_lines
+if echo "$schema_content" | jq -e '.methods' >/dev/null 2>&1; then
+  method_count=$(echo "$schema_content" | jq '.methods | length')
 
-  get updatedAt() {
-    return this._updatedAt;
-  }
+  for ((i = 0; i < method_count; i++)); do
+    method_name=$(echo "$schema_content" | jq -r ".methods[$i].name")
+    method_params=$(echo "$schema_content" | jq -r ".methods[$i].params | join(\", \")")
+    method_body=$(echo "$schema_content" | jq -r ".methods[$i].body")
 
-  get deletedAt() {
-    return this._deletedAt;
-  }
-  set deletedAt(value) {
-    this._deletedAt = value;
-    this._touchUpdatedAt();
-  }
-
-  get ownedBy() {
-    return this._ownedBy;
-  }
-  set ownedBy(value) {
-    this._ownedBy = value;
-    this._touchUpdatedAt();
-  }
-
-  // Métodos para activar / desactivar
-  activate() {
-    this._active = true;
-    this._touchUpdatedAt();
-  }
-
-  deactivate() {
-    this._active = false;
-    this._touchUpdatedAt();
-  }
-
-  // Método para actualizar propiedades de forma controlada
-  update(data) {
-    if (data.deletedAt !== undefined) this.deletedAt = data.deletedAt;
-    if (data.ownedBy !== undefined) this.ownedBy = data.ownedBy;
-    if (data.active !== undefined) {
-      this._active = data.active;
-    }
-    this._touchUpdatedAt();
-  }
-
-  // Actualizar updatedAt al modificar algo
-  _touchUpdatedAt() {
-    this._updatedAt = new Date();
-  }
-
-  // Exportar a JSON
-  toJSON() {
-    return {
-      id: this._id,
-      active: this._active,
-      createdAt: this._createdAt,
-      updatedAt: this._updatedAt,
-      deletedAt: this._deletedAt,
-      ownedBy: this._ownedBy,
-    };
-  }
-}
-EOF
+    # Construir el método
+    method_lines+=("") # línea vacía antes del método
+    method_lines+=("  $method_name($method_params) {")
+    method_lines+=("    $method_body")
+    method_lines+=("  }")
+  done
 fi
 
-# 1.5 VALIDATE (src/domain/$entity/validate-$entity.js)
+constructor_params=""
+declare -a constructor_body_lines
+declare -a getter_lines
+declare -a setter_lines
+declare -a tojson_lines
+
+for i in "${!names[@]}"; do
+  name="${names[i]}"
+  default="${defaults[i]}"
+  required="${requireds[i]}"
+
+  # Saltar si el nombre está vacío
+  [[ -z "$name" || "$name" == "null" ]] && continue
+
+  constructor_params+="$name, "
+
+  if [[ "$required" == "true" && (-z "$default" || "$default" == "empty") ]]; then
+    constructor_body_lines+=("    if ($name === undefined) throw new Error('$name is required');")
+  fi
+
+  if [[ -n "$default" && "$default" != "empty" ]]; then
+    constructor_body_lines+=("    this._$name = $name !== undefined ? $name : $default;")
+  else
+    constructor_body_lines+=("    this._$name = $name;")
+  fi
+
+  getter_lines+=("  get $name() { return this._$name; }")
+  setter_lines+=("  set $name(value) { this._$name = value; this._touchUpdatedAt(); }")
+  tojson_lines+=("      $name: this._$name,")
+done
+
+# Limpiar params y última coma del toJSON
+constructor_params="${constructor_params%, }"
+if [[ ${#tojson_lines[@]} -gt 0 ]]; then
+  tojson_lines[-1]="${tojson_lines[-1]%,}"
+fi
+
+# Escritura del archivo
+{
+  echo "export class $ENTITY_PASCAL {"
+  echo "  /**"
+  echo "   * @param {Object} params"
+  echo "   */"
+  echo "  constructor({ $constructor_params }) {"
+  printf "%s\n" "${constructor_body_lines[@]}"
+  echo "  }"
+  echo ""
+  printf "%s\n" "${getter_lines[@]}"
+  printf "%s\n" "${setter_lines[@]}"
+  echo ""
+  echo "  _touchUpdatedAt() {"
+  echo "    this._updatedAt = new Date();"
+  echo "  }"
+
+  # Agregar métodos personalizados si existen
+  if [[ ${#method_lines[@]} -gt 0 ]]; then
+    printf "%s\n" "${method_lines[@]}"
+  fi
+
+  echo ""
+  echo "  toJSON() {"
+  echo "    return {"
+  printf "%s\n" "${tojson_lines[@]}"
+  echo "    };"
+  echo "  }"
+  echo "}"
+} >"$domain_file"
+
+echo "✅ Clase generada: $domain_file"
+
+# ----------------------------------------------
+# 1.5 VALIDATE
 validate_file="src/domain/$entity/validate-$entity.js"
-if confirm_action "¿Generar función validate ($validate_file)?"; then
+if confirm_action "¿Generar validate ($validate_file)?"; then
+  # Usar el mismo método que ya funciona en el constructor
+  field_count=$(echo "$fields" | jq '. | length')
+
+  declare -a val_names
+  declare -a val_requireds
+
+  # Llenar arrays campo por campo (mismo método que funciona arriba)
+  for ((i = 0; i < field_count; i++)); do
+    val_names[i]=$(echo "$fields" | jq -r ".[$i].name")
+    val_requireds[i]=$(echo "$fields" | jq -r ".[$i].required // false")
+  done
+
+  validation_lines=""
+
+  for i in "${!val_names[@]}"; do
+    name="${val_names[i]}"
+    required="${val_requireds[i]}"
+
+    # Saltar si el nombre está vacío
+    [[ -z "$name" || "$name" == "null" ]] && continue
+
+    if [[ "$required" == "true" ]]; then
+      validation_lines+="  if (!data.$name) throw new Error('$name is required');"$'\n'
+    fi
+  done
+
   cat <<EOF >"$validate_file"
 export function validate${EntityPascal}(data) {
-  if (!data.id) throw new Error('ID is required');
-  // Puedes agregar más validaciones si deseas (por ejemplo, formatos de fecha)
-  return true;
+$validation_lines  return true;
 }
 EOF
+
+  echo "✅ Validación generada: $validate_file"
 fi
 
 # 1.6 FACTORY (src/domain/$entity/$entity-factory.js)
