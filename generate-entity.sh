@@ -22,7 +22,7 @@ confirm_action() {
 # Pedir nombre de entidad
 read -r -p "Nombre de la entidad (ej. user, product): " entity
 EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
-EntityCamel="$(tr '-' '_' <<<"$entity")"
+# EntityCamel="$(tr '-' '_' <<<"$entity")"
 
 echo "Generando estructura para entidad '$entity'..."
 
