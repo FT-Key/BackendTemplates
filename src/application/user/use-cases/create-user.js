@@ -1,4 +1,5 @@
-import { User } from '../../../domain/user/user.js';
+// create-user.js
+import { UserFactory } from '../../../domain/user/user-factory.js';
 import crypto from 'crypto';
 
 export class CreateUser {
@@ -17,15 +18,10 @@ export class CreateUser {
    * @returns {Promise<User>}
    */
   async execute(data) {
-    // Validaciones básicas
-    if (!data.name) throw new Error('Name is required');
-    if (!data.email) throw new Error('Email is required');
-
-    const user = new User({
+    // Usamos la fábrica para crear y validar
+    const user = UserFactory.create({
+      ...data,
       id: crypto.randomUUID(),
-      name: data.name,
-      email: data.email,
-      password: data.password || null,
     });
 
     return this.userRepository.save(user);
