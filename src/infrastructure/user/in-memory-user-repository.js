@@ -54,9 +54,9 @@ export class InMemoryUserRepository {
  */
   async deactivateById(id) {
     const user = await this.findById(id);
-    if (!user) return false;
+    if (!user) return null; // o false
     user.deactivate();
     await this.save(user);
-    return true;
+    return user;
   }
 }

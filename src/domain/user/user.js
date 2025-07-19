@@ -1,30 +1,43 @@
 export class User {
   /**
-   * @param {Object} props
-   * @param {string} props.id
-   * @param {string} props.name
-   * @param {string} props.email
-   * @param {string} [props.password]         // Hasheada idealmente
-   * @param {boolean} [props.isActive]
-   * @param {Date} [props.createdAt]
-   * @param {Date} [props.updatedAt]
-   * @param {Object} [props.metadata]         // Para agregar campos extra dinámicos
+   * @param {Object} params
+   * @param {string} params.id
+   * @param {string} params.name
+   * @param {string} params.email
+   * @param {string|null} [params.password]
+   * @param {boolean} [params.active]
+   * @param {Date} [params.createdAt]
+   * @param {Date} [params.updatedAt]
+   * @param {Date|null} [params.deletedAt]
+   * @param {string|null} [params.ownedBy]
    */
-  constructor(props) {
-    if (!props) throw new Error('Props is required');
-    if (!props.id) throw new Error('User id is required');
-    if (!props.name) throw new Error('User name is required');
-    if (!props.email) throw new Error('User email is required');
+  constructor({
+    id,
+    name,
+    email,
+    password = null,
+    active = true,
+    createdAt = new Date(),
+    updatedAt = new Date(),
+    deletedAt = null,
+    ownedBy = null,
+  }) {
+    if (!id) throw new Error('User id is required');
+    if (!name) throw new Error('User name is required');
+    if (!email) throw new Error('User email is required');
 
-    this._id = props.id;
-    this._name = props.name;
-    this._email = props.email;
-    this._password = props.password || null;
-    this._isActive = props.isActive !== undefined ? props.isActive : true;
-    this._createdAt = props.createdAt || new Date();
-    this._updatedAt = props.updatedAt || new Date();
-    this._metadata = props.metadata || {};
+    this._id = id;
+    this._name = name;
+    this._email = email;
+    this._password = password;
+    this._active = active;
+    this._createdAt = createdAt;
+    this._updatedAt = updatedAt;
+    this._deletedAt = deletedAt;
+    this._ownedBy = ownedBy;
   }
+
+  // Getters y setters
 
   get id() {
     return this._id;
@@ -33,7 +46,6 @@ export class User {
   get name() {
     return this._name;
   }
-
   set name(value) {
     if (!value) throw new Error('Name cannot be empty');
     this._name = value;
@@ -43,7 +55,6 @@ export class User {
   get email() {
     return this._email;
   }
-
   set email(value) {
     if (!value) throw new Error('Email cannot be empty');
     this._email = value;
@@ -53,25 +64,13 @@ export class User {
   get password() {
     return this._password;
   }
-
   set password(value) {
-    // Aquí podrías agregar validación o hashing fuera de esta clase
     this._password = value;
     this._touchUpdatedAt();
   }
 
-  get isActive() {
-    return this._isActive;
-  }
-
-  activate() {
-    this._isActive = true;
-    this._touchUpdatedAt();
-  }
-
-  deactivate() {
-    this._isActive = false;
-    this._touchUpdatedAt();
+  get active() {
+    return this._active;
   }
 
   get createdAt() {
@@ -82,28 +81,50 @@ export class User {
     return this._updatedAt;
   }
 
-  get metadata() {
-    return this._metadata;
+  get deletedAt() {
+    return this._deletedAt;
   }
-
-  setMetadata(key, value) {
-    this._metadata[key] = value;
+  set deletedAt(value) {
+    this._deletedAt = value;
     this._touchUpdatedAt();
   }
 
+  get ownedBy() {
+    return this._ownedBy;
+  }
+  set ownedBy(value) {
+    this._ownedBy = value;
+    this._touchUpdatedAt();
+  }
+
+  // Métodos para activar / desactivar
+  activate() {
+    this._active = true;
+    this._touchUpdatedAt();
+  }
+
+  deactivate() {
+    this._active = false;
+    this._touchUpdatedAt();
+  }
+
+  // Actualizar updatedAt
   _touchUpdatedAt() {
     this._updatedAt = new Date();
   }
 
+  // Exportar a JSON
   toJSON() {
     return {
       id: this._id,
       name: this._name,
       email: this._email,
-      isActive: this._isActive,
+      password: this._password,
+      active: this._active,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
-      metadata: this._metadata,
+      deletedAt: this._deletedAt,
+      ownedBy: this._ownedBy,
     };
   }
 }

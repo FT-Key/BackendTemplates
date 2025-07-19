@@ -48,22 +48,74 @@ export class $EntityPascal {
    * @param {string|null} [params.ownedBy]
    */
   constructor({ id, active = true, createdAt = new Date(), updatedAt = new Date(), deletedAt = null, ownedBy = null }) {
-    this.id = id;
-    this.active = active;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
-    this.deletedAt = deletedAt;
-    this.ownedBy = ownedBy;
+    if (!id) throw new Error('$EntityPascal id is required');
+
+    this._id = id;
+    this._active = active;
+    this._createdAt = createdAt;
+    this._updatedAt = updatedAt;
+    this._deletedAt = deletedAt;
+    this._ownedBy = ownedBy;
   }
 
+  // Getters
+  get id() {
+    return this._id;
+  }
+
+  get active() {
+    return this._active;
+  }
+
+  get createdAt() {
+    return this._createdAt;
+  }
+
+  get updatedAt() {
+    return this._updatedAt;
+  }
+
+  get deletedAt() {
+    return this._deletedAt;
+  }
+  set deletedAt(value) {
+    this._deletedAt = value;
+    this._touchUpdatedAt();
+  }
+
+  get ownedBy() {
+    return this._ownedBy;
+  }
+  set ownedBy(value) {
+    this._ownedBy = value;
+    this._touchUpdatedAt();
+  }
+
+  // Métodos para activar / desactivar
+  activate() {
+    this._active = true;
+    this._touchUpdatedAt();
+  }
+
+  deactivate() {
+    this._active = false;
+    this._touchUpdatedAt();
+  }
+
+  // Actualizar updatedAt al modificar algo
+  _touchUpdatedAt() {
+    this._updatedAt = new Date();
+  }
+
+  // Exportar a JSON
   toJSON() {
     return {
-      id: this.id,
-      active: this.active,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      deletedAt: this.deletedAt,
-      ownedBy: this.ownedBy
+      id: this._id,
+      active: this._active,
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt,
+      deletedAt: this._deletedAt,
+      ownedBy: this._ownedBy,
     };
   }
 }
