@@ -1,24 +1,42 @@
 #!/bin/bash
 
-# Pedir nombre de entidad en singular y en minúscula
-read -p "Nombre de la entidad (ej. user, product): " entity
-EntityPascal="$(tr '[:lower:]' '[:upper:]' <<< ${entity:0:1})${entity:1}"
-EntityCamel="$(tr '-' '_' <<< $entity)"
+# ----------------------------------------------
+# Modo automático con -y
+AUTO_CONFIRM=false
+if [[ "$1" == "-y" ]]; then
+  AUTO_CONFIRM=true
+fi
+
+confirm_action() {
+  local prompt="$1"
+  local result
+  if $AUTO_CONFIRM; then
+    result="y"
+  else
+    read -r -p "$prompt [y/n] " result
+  fi
+  [[ "$result" == "y" ]]
+}
+
+# ----------------------------------------------
+# Pedir nombre de entidad
+read -r -p "Nombre de la entidad (ej. user, product): " entity
+EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
+EntityCamel="$(tr '-' '_' <<<"$entity")"
 
 echo "Generando estructura para entidad '$entity'..."
 
 # Carpetas base
-mkdir -p src/domain/$entity
-mkdir -p src/application/$entity/use-cases
-mkdir -p src/infrastructure/$entity
-mkdir -p src/interfaces/http/$entity
-mkdir -p tests/application/$entity
+mkdir -p "src/domain/$entity"
+mkdir -p "src/application/$entity/use-cases"
+mkdir -p "src/infrastructure/$entity"
+mkdir -p "src/interfaces/http/$entity"
+mkdir -p "tests/application/$entity"
 
 # 1. DOMAIN
 domain_file="src/domain/$entity/$entity.js"
-read -p "¿Inicializar clase Domain ($domain_file)? [y/n] " confirm
-if [[ $confirm == "y" ]]; then
-cat <<EOF > $domain_file
+if confirm_action "¿Inicializar clase Domain ($domain_file)?"; then
+  cat <<EOF >"$domain_file"
 export class $EntityPascal {
   /**
    * @param {Object} params
@@ -43,11 +61,53 @@ export class $EntityPascal {
 EOF
 fi
 
+# 1.5 VALIDATE (src/domain/$entity/validate-$entity.js)
+validate_file="src/domain/$entity/validate-$entity.js"
+if confirm_action "¿Generar función validate ($validate_file)?"; then
+  cat <<EOF >"$validate_file"
+export function validate${EntityPascal}(data) {
+  if (!data.name) throw new Error('Name is required');
+  // Agregar más validaciones según sea necesario
+  return true;
+}
+EOF
+fi
+
+# 1.6 FACTORY (src/domain/$entity/$entity-factory.js)
+factory_file="src/domain/$entity/${entity}-factory.js"
+if confirm_action "¿Generar método fábrica ($factory_file)?"; then
+  cat <<EOF >"$factory_file"
+import { $EntityPascal } from './$entity.js';
+import { validate${EntityPascal} } from './validate-$entity.js';
+
+export class ${EntityPascal}Factory {
+  /**
+   * Crea una instancia de $EntityPascal validando los datos.
+   * @param {Object} data
+   * @returns {$EntityPascal}
+   */
+  static create(data) {
+    validate${EntityPascal}(data);
+    return new $EntityPascal(data);
+  }
+}
+EOF
+fi
+
+# 1.7 CONSTANTS (src/domain/$entity/constants.js)
+constants_file="src/domain/$entity/constants.js"
+if confirm_action "¿Generar archivo constantes ($constants_file)?"; then
+  cat <<EOF >"$constants_file"
+// Constantes relacionadas con $EntityPascal
+
+export const DEFAULT_ACTIVE = true;
+EOF
+fi
+
 # 2. INFRASTRUCTURE
 infra_file="src/infrastructure/$entity/in-memory-${entity}-repository.js"
-read -p "¿Inicializar repositorio InMemory ($infra_file)? [y/n] " confirm
-if [[ $confirm == "y" ]]; then
-cat <<EOF > $infra_file
+if confirm_action "¿Inicializar repositorio InMemory ($infra_file)?"; then
+  cat <<EOF >"$infra_file"
 import { $EntityPascal } from '../../domain/$entity/$entity.js';
 
 export class InMemory${EntityPascal}Repository {
@@ -94,55 +154,63 @@ export class InMemory${EntityPascal}Repository {
 EOF
 fi
 
-# Función que genera el archivo de use-case con contenido completo
+# Función para generar casos de uso
 generate_use_case() {
   action=$1
   file_path="src/application/$entity/use-cases/${action}-${entity}.js"
   mkdir -p "$(dirname "$file_path")"
 
-  echo "import { $EntityPascal } from '../../../domain/$entity/$entity.js';" > "$file_path"
-  echo "" >> "$file_path"
-  echo "export async function ${action}${EntityPascal}(repository, $( [[ $action == "create" ]] && echo "data" || echo "id, data" )) {" >> "$file_path"
-  echo "  // Lógica base" >> "$file_path"
-  
+  {
+    echo "import { $EntityPascal } from '../../../domain/$entity/$entity.js';"
+    echo ""
+    echo "export async function ${action}${EntityPascal}(repository, $([[ $action == "create" ]] && echo "data" || echo "id, data")) {"
+    echo "  // Lógica base"
+  } >"$file_path"
+
   if [ "$action" == "create" ]; then
-    echo "  const item = new $EntityPascal({ id: Date.now().toString(), ...data });" >> "$file_path"
-    echo "  return await repository.save(item);" >> "$file_path"
+    echo "  const item = new $EntityPascal({ id: Date.now().toString(), ...data });" >>"$file_path"
+    echo "  return await repository.save(item);" >>"$file_path"
   elif [ "$action" == "get" ]; then
-    echo "  return await repository.findById(id);" >> "$file_path"
+    echo "  return await repository.findById(id);" >>"$file_path"
   elif [ "$action" == "update" ]; then
-    echo "  return await repository.update(id, data);" >> "$file_path"
+    echo "  return await repository.update(id, data);" >>"$file_path"
   elif [ "$action" == "delete" ]; then
-    echo "  return await repository.deleteById(id);" >> "$file_path"
+    echo "  return await repository.deleteById(id);" >>"$file_path"
   elif [ "$action" == "deactivate" ]; then
-    echo "  return await repository.deactivateById(id);" >> "$file_path"
+    echo "  return await repository.deactivateById(id);" >>"$file_path"
   fi
 
-  echo "}" >> "$file_path"
+  echo "}" >>"$file_path"
 }
 
-# 3. APPLICATION / USE-CASES
+# 3. USE CASES
 for action in create get update delete deactivate; do
   usecase_file="src/application/$entity/use-cases/${action}-${entity}.js"
-  read -p "¿Generar caso de uso $action ($usecase_file)? [y/n] " confirm
-  if [[ $confirm == "y" ]]; then
+  if confirm_action "¿Generar caso de uso $action ($usecase_file)?"; then
     generate_use_case "$action"
   fi
 done
 
-# 3.5. APPLICATION / SERVICES
+# 3.5. SERVICES
 services_path="src/application/$entity/services"
-read -p "¿Crear carpeta de servicios ($services_path)? [y/n] " confirm
-if [[ $confirm == "y" ]]; then
+if confirm_action "¿Crear carpeta de servicios ($services_path)?"; then
   mkdir -p "$services_path"
-  echo "// Servicios para la entidad $EntityPascal" > "$services_path/README.md"
+  echo "// Servicios para la entidad $EntityPascal" >"$services_path/README.md"
+fi
+service_file="src/application/$entity/services/get-active-${entity}.js"
+if confirm_action "¿Agregar servicio getActive? ($service_file)"; then
+  cat <<EOF >"$service_file"
+export async function getActive${EntityPascal}s(repository) {
+  const all = await repository.findAll();
+  return all.filter(item => item.active);
+}
+EOF
 fi
 
 # 4. CONTROLLER
 controller_file="src/interfaces/http/$entity/${entity}.controller.js"
-read -p "¿Generar controller ($controller_file)? [y/n] " confirm
-if [[ $confirm == "y" ]]; then
-cat <<EOF > $controller_file
+if confirm_action "¿Generar controller ($controller_file)?"; then
+  cat <<EOF >"$controller_file"
 import { InMemory${EntityPascal}Repository } from '../../../infrastructure/$entity/in-memory-${entity}-repository.js';
 import { create${EntityPascal} } from '../../../application/$entity/use-cases/create-${entity}.js';
 import { get${EntityPascal} } from '../../../application/$entity/use-cases/get-${entity}.js';
@@ -182,9 +250,8 @@ fi
 
 # 5. ROUTES
 routes_file="src/interfaces/http/$entity/${entity}.routes.js"
-read -p "¿Generar archivo de rutas ($routes_file)? [y/n] " confirm
-if [[ $confirm == "y" ]]; then
-cat <<EOF > $routes_file
+if confirm_action "¿Generar archivo de rutas ($routes_file)?"; then
+  cat <<EOF >"$routes_file"
 import express from 'express';
 import {
   create${EntityPascal}Controller,
@@ -209,9 +276,8 @@ fi
 # 6. TESTS
 for action in create get update delete deactivate; do
   test_file="tests/application/$entity/${action}-${entity}.test.js"
-  read -p "¿Generar test base para $action? ($test_file) [y/n] " confirm
-  if [[ $confirm == "y" ]]; then
-cat <<EOF > $test_file
+  if confirm_action "¿Generar test base para $action? ($test_file)"; then
+    cat <<EOF >"$test_file"
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
 import { ${action}${EntityPascal} } from '../../../src/application/$entity/use-cases/${action}-${entity}.js';
 
