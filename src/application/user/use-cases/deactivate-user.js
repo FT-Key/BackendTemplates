@@ -8,11 +8,12 @@ export class DeactivateUser {
 
   /**
    * @param {string} id
-   * @returns {Promise<boolean>} true si usuario se desactivó, false si no existe
+   * @returns {Promise<User|null>} Devuelve el usuario desactivado o null si no existe
    */
   async execute(id) {
     if (!id) throw new Error('User id is required');
 
-    return this.userRepository.deactivateById(id);
+    const user = await this.userRepository.deactivateById(id);
+    return user; // usuario desactivado o null
   }
 }

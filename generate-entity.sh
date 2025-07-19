@@ -41,20 +41,81 @@ export class $EntityPascal {
   /**
    * @param {Object} params
    * @param {string} params.id
-   * @param {string} params.name
    * @param {boolean} [params.active]
+   * @param {Date} [params.createdAt]
+   * @param {Date} [params.updatedAt]
+   * @param {Date|null} [params.deletedAt]
+   * @param {string|null} [params.ownedBy]
    */
-  constructor({ id, name, active = true }) {
-    this.id = id;
-    this.name = name;
-    this.active = active;
+  constructor({ id, active = true, createdAt = new Date(), updatedAt = new Date(), deletedAt = null, ownedBy = null }) {
+    if (!id) throw new Error('$EntityPascal id is required');
+
+    this._id = id;
+    this._active = active;
+    this._createdAt = createdAt;
+    this._updatedAt = updatedAt;
+    this._deletedAt = deletedAt;
+    this._ownedBy = ownedBy;
   }
 
+  // Getters
+  get id() {
+    return this._id;
+  }
+
+  get active() {
+    return this._active;
+  }
+
+  get createdAt() {
+    return this._createdAt;
+  }
+
+  get updatedAt() {
+    return this._updatedAt;
+  }
+
+  get deletedAt() {
+    return this._deletedAt;
+  }
+  set deletedAt(value) {
+    this._deletedAt = value;
+    this._touchUpdatedAt();
+  }
+
+  get ownedBy() {
+    return this._ownedBy;
+  }
+  set ownedBy(value) {
+    this._ownedBy = value;
+    this._touchUpdatedAt();
+  }
+
+  // Métodos para activar / desactivar
+  activate() {
+    this._active = true;
+    this._touchUpdatedAt();
+  }
+
+  deactivate() {
+    this._active = false;
+    this._touchUpdatedAt();
+  }
+
+  // Actualizar updatedAt al modificar algo
+  _touchUpdatedAt() {
+    this._updatedAt = new Date();
+  }
+
+  // Exportar a JSON
   toJSON() {
     return {
-      id: this.id,
-      name: this.name,
-      active: this.active
+      id: this._id,
+      active: this._active,
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt,
+      deletedAt: this._deletedAt,
+      ownedBy: this._ownedBy,
     };
   }
 }
@@ -66,8 +127,8 @@ validate_file="src/domain/$entity/validate-$entity.js"
 if confirm_action "¿Generar función validate ($validate_file)?"; then
   cat <<EOF >"$validate_file"
 export function validate${EntityPascal}(data) {
-  if (!data.name) throw new Error('Name is required');
-  // Agregar más validaciones según sea necesario
+  if (!data.id) throw new Error('ID is required');
+  // Puedes agregar más validaciones si deseas (por ejemplo, formatos de fecha)
   return true;
 }
 EOF
