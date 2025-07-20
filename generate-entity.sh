@@ -440,6 +440,7 @@ fi
 
 # 6. TESTS
 for action in create get update delete deactivate; do
+
   test_file="tests/application/$entity/${action}-${entity}.test.js"
   if confirm_action "¿Generar test base para $action? ($test_file)"; then
     cat <<EOF >"$test_file"
