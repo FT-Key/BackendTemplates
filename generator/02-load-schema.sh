@@ -3,9 +3,10 @@
 
 custom_fields='[]'
 schema_content='{}'
-SCHEMA_JSON="./generator/entity-scheme.json" # Default
 
-# Parseo de flags
+SCHEMA_JSON="./generator/entity-schema.json" # default
+SCHEMA_DIR="./generator/entity-schemas"      # default si usás --schema-dir y no das otro dir
+
 while [[ $# -gt 0 ]]; do
   case $1 in
   -y)
@@ -16,8 +17,39 @@ while [[ $# -gt 0 ]]; do
     USE_JSON=true
     shift
     ;;
-  --scheme-dir)
-    read -r -p "📄 Ingrese el path completo al archivo JSON del esquema (ej. ./generator/entity-schemes/user-scheme.json): " SCHEMA_JSON
+  --schema-dir)
+    read -r -p "📁 Ingrese path al directorio de esquemas JSON (default: $SCHEMA_DIR): " input_dir
+    if [[ -n "$input_dir" ]]; then
+      SCHEMA_DIR="$input_dir"
+    fi
+
+    if [[ ! -d "$SCHEMA_DIR" ]]; then
+      echo "❌ Directorio no existe: $SCHEMA_DIR"
+      exit 1
+    fi
+
+    # Listar JSON disponibles
+    mapfile -t json_files < <(find "$SCHEMA_DIR" -maxdepth 1 -type f -name '*.json' | sort)
+    if [[ ${#json_files[@]} -eq 0 ]]; then
+      echo "❌ No se encontraron archivos JSON en $SCHEMA_DIR"
+      exit 1
+    fi
+
+    echo "Seleccione el archivo JSON para usar:"
+
+    for i in "${!json_files[@]}"; do
+      fname=$(basename "${json_files[i]}")
+      echo "  $((i + 1))) $fname"
+    done
+
+    read -r -p "Ingrese número (1-${#json_files[@]}): " selected_num
+
+    if ! [[ "$selected_num" =~ ^[0-9]+$ ]] || ((selected_num < 1 || selected_num > ${#json_files[@]})); then
+      echo "❌ Selección inválida"
+      exit 1
+    fi
+
+    SCHEMA_JSON="${json_files[selected_num - 1]}"
     shift
     ;;
   *)
