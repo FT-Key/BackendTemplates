@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 AUTO_CONFIRM=false
 USE_JSON=false
 
