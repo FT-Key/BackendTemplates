@@ -1,14 +1,17 @@
 import express from 'express';
 
 export class Server {
-  constructor({ routes = [] } = {}) {
+  constructor({ routes = [], middlewares = [] } = {}) {
     this.app = express();
     this.routes = routes;
+    this.middlewares = middlewares;
   }
 
   setupMiddlewares() {
-    this.app.use(express.json());
-    // Aquí podés agregar middlewares como CORS, logging, auth, etc.
+    this.app.use(express.json()); // Middleware base
+    this.middlewares.forEach((mw) => {
+      this.app.use(mw); // Aplica uno por uno
+    });
   }
 
   setupRoutes() {
@@ -22,11 +25,11 @@ export class Server {
     this.setupRoutes();
 
     this.app.listen(port, () => {
-      console.log(`Servidor iniciado en http://localhost:${port}`);
+      console.log(`🚀 Servidor iniciado en http://localhost:${port}`);
     });
   }
 
   getApp() {
-    return this.app; // Para test o uso externo
+    return this.app;
   }
 }
