@@ -38,7 +38,7 @@ mkdir -p "src/interfaces/http/$entity"
 mkdir -p "tests/application/$entity"
 
 # Ejecutar partes de generación
-source ./scripts/03-generate-domain.sh
+source ./generator/03-generate-domain.sh
 source ./generator/04-generate-validation.sh
 source ./generator/05-generate-factory.sh
 source ./generator/06-generate-constants.sh
