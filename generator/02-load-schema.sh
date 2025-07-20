@@ -70,10 +70,12 @@ if [[ "$USE_JSON" == true ]]; then
   fi
 
   entity=$(jq -r '.name' "$SCHEMA_JSON")
+  entity="${entity,,}" # convierto todo a minúsculas
   custom_fields=$(jq -c '.fields' "$SCHEMA_JSON")
   schema_content=$(cat "$SCHEMA_JSON")
 else
   read -r -p "📝 Nombre de la entidad (ej. user, product): " entity
+  entity="${entity,,}" # también convierto input manual a minúsculas
 fi
 
 EntityPascal="$(tr '[:lower:]' '[:upper:]' <<<"${entity:0:1}")${entity:1}"
