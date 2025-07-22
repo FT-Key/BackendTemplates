@@ -5,63 +5,49 @@ import { GetUser } from '../../../application/user/use-cases/get-user.js';
 import { UpdateUser } from '../../../application/user/use-cases/update-user.js';
 import { DeleteUser } from '../../../application/user/use-cases/delete-user.js';
 import { DeactivateUser } from '../../../application/user/use-cases/deactivate-user.js';
+import { ListUsers } from '../../../application/user/use-cases/list-users.js';
 
-const userRepository = new InMemoryUserRepository();
+const repository = new InMemoryUserRepository();
 
 export const createUserController = async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    const useCase = new CreateUser(userRepository);
-    const user = await useCase.execute({ name, email });
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+  const useCase = new CreateUser(repository);
+  const item = await useCase.execute(req.body);
+  res.status(201).json(item);
 };
 
 export const getUserController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const useCase = new GetUser(userRepository);
-    const user = await useCase.execute(id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+  const useCase = new GetUser(repository);
+  const item = await useCase.execute(req.params.id);
+  if (!item) return res.status(404).json({ error: 'User not found' });
+  res.json(item);
 };
 
 export const updateUserController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const data = req.body;
-    const useCase = new UpdateUser(userRepository);
-    const user = await useCase.execute(id, data);
-    res.json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+  const useCase = new UpdateUser(repository);
+  const item = await useCase.execute(req.params.id, req.body);
+  res.json(item);
 };
 
 export const deleteUserController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const useCase = new DeleteUser(userRepository);
-    const success = await useCase.execute(id);
-    if (!success) return res.status(404).json({ error: 'User not found' });
-    res.status(204).send(); // No content
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+  const useCase = new DeleteUser(repository);
+  const success = await useCase.execute(req.params.id);
+  res.status(success ? 204 : 404).send();
 };
 
 export const deactivateUserController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const useCase = new DeactivateUser(userRepository);
-    const user = await useCase.execute(id);
-    res.json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+  const useCase = new DeactivateUser(repository);
+  const item = await useCase.execute(req.params.id);
+  res.json(item);
+};
+
+export const listUsersController = async (req, res) => {
+  const useCase = new ListUsers(repository);
+  console.log("llega aqui")
+  const users = await useCase.execute({
+    filters: req.filters,
+    search: req.search,
+    pagination: req.pagination,
+    sort: req.sort,
+  });
+  res.json(users);
 };

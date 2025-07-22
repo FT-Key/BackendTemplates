@@ -1,5 +1,3 @@
-// src/interfaces/http/middlewares/check-role.middleware.js
-
 export function checkRole(requiredRole) {
   return (req, res, next) => {
     const user = req.user;

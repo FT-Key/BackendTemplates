@@ -112,35 +112,50 @@ EOF
 
 cat <<'EOF' >src/index.js
 import { Server } from './config/server.js';
+
 import healthRoutes from './interfaces/http/health/health.routes.js';
 import publicRoutes from './interfaces/http/public/public.routes.js';
+
+// import entityRoutes from './interfaces/http/entity/entity.routes.js';
+
 import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
+import { createQueryMiddlewares } from './interfaces/http/middlewares/query.middlewares.js';
+// import { entityQueryConfig } from './interfaces/http/entity/query-entity-config.js';
 
-// IMPORTAR RUTAS DE TEST Y MIDDLEWARES AQUÍ
-// import testRoutes from './interfaces/http/test/test.routes.js';
-// import { exampleMiddleware } from './interfaces/http/middlewares/example.middleware.js';
-
-const globalMiddlewares = [];
 const excludePathsByMiddleware = {
-  // exampleMiddleware: ['/public', '/health']
+  // Por ahora sin exclusiones específicas
 };
 
-const routeMiddlewares = {
-  // '/': [exampleMiddleware],
-};
+const routeMiddlewares = {};
 
-// const testRouter = wrapRouterWithFlexibleMiddlewares(testRoutes, {
-//   globalMiddlewares,
+// Middlewares globales comunes (como helmet, cors, etc) pueden ir acá
+const globalMiddlewares = [];
+
+// Ejemplo de cómo inyectar middlewares de búsqueda en /entity
+// const entityRouterWithMiddlewares = wrapRouterWithFlexibleMiddlewares(entityRoutes, {
+//   globalMiddlewares: createQueryMiddlewares(entityQueryConfig),
 //   excludePathsByMiddleware,
 //   routeMiddlewares,
 // });
 
+const healthRouter = wrapRouterWithFlexibleMiddlewares(healthRoutes, {
+  globalMiddlewares,
+  excludePathsByMiddleware,
+  routeMiddlewares,
+});
+
+const publicRouter = wrapRouterWithFlexibleMiddlewares(publicRoutes, {
+  globalMiddlewares,
+  excludePathsByMiddleware,
+  routeMiddlewares,
+});
+
 const server = new Server({
   middlewares: [],
   routes: [
-    // { path: '/test', handler: testRouter },
-    { path: '/health', handler: healthRoutes },
-    { path: '/public', handler: publicRoutes },
+    { path: '/health', handler: healthRouter },
+    { path: '/public', handler: publicRouter },
+    // { path: '/entity', handler: entityRouterWithMiddlewares },
   ],
 });
 

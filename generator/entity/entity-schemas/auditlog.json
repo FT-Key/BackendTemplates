@@ -4,7 +4,7 @@
     { "name": "userId", "required": true },
     { "name": "action", "required": true },
     { "name": "entity", "required": true },
-    { "name": "entityId", "required": true },
+    { "name": "entityId", "required": true, "sensible": true },
     { "name": "timestamp" }
   ],
   "methods": []

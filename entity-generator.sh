@@ -47,6 +47,8 @@ source ./generator/entity/08-generate-usecases.sh
 source ./generator/entity/09-generate-services.sh
 source ./generator/entity/10-generate-controller.sh
 source ./generator/entity/11-generate-routes.sh
-source ./generator/entity/12-generate-tests.sh
+source ./generator/entity/12-generate-query-entity-config.sh
+source ./generator/entity/13-generate-query-middlewares.sh
+source ./generator/entity/14-generate-tests.sh
 
 echo "✔️  Estructura generada para '$entity'"

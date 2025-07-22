@@ -6,25 +6,21 @@ import { GetUser } from '../../../src/application/user/use-cases/get-user.js';
 
 async function testDeactivateUser() {
   const repo = new InMemoryUserRepository();
-  const createUser = new CreateUser(repo);
-  const deactivateUser = new DeactivateUser(repo);
-  const getUser = new GetUser(repo);
+  const create = new CreateUser(repo);
+  const deactivate = new DeactivateUser(repo);
+  const get = new GetUser(repo);
 
-  // Crear usuario
-  const user = await createUser.execute({
-    name: 'Franco',
-    email: 'franco@example.com',
-  });
+  const input = {
 
-  // Desactivar usuario
-  const deactivatedUser = await deactivateUser.execute(user.id);
+  };
 
-  // Verificar que devuelve el usuario desactivado (objeto)
-  assert.ok(deactivatedUser, 'Debe devolver el usuario desactivado');
-  assert.strictEqual(deactivatedUser.active, false);
+  const created = await create.execute(input);
+  const deactivated = await deactivate.execute(created.id);
 
-  // Obtener usuario y verificar que esté desactivado
-  const fetched = await getUser.execute(user.id);
+  assert.ok(deactivated, 'Debe devolver la entidad desactivada');
+  assert.strictEqual(deactivated.active, false);
+
+  const fetched = await get.execute(created.id);
   assert.strictEqual(fetched.active, false);
 
   console.log('✅ deactivate-user passed');

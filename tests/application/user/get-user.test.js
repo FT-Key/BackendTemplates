@@ -5,17 +5,17 @@ import { GetUser } from '../../../src/application/user/use-cases/get-user.js';
 
 async function testGetUser() {
   const repo = new InMemoryUserRepository();
-  const createUser = new CreateUser(repo);
-  const getUser = new GetUser(repo);
+  const create = new CreateUser(repo);
+  const get = new GetUser(repo);
 
-  const userCreated = await createUser.execute({
-    name: 'Franco Toledo',
-    email: 'franco@example.com',
-  });
+  const input = {
 
-  const userFetched = await getUser.execute(userCreated.id);
+  };
 
-  assert.strictEqual(userFetched.id, userCreated.id);
+  const created = await create.execute(input);
+  const fetched = await get.execute(created.id);
+
+  assert.strictEqual(fetched.id, created.id);
   console.log('✅ get-user passed');
 }
 

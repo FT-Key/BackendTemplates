@@ -1,48 +1,50 @@
 import { Server } from './config/server.js';
 
-import userRoutes from './interfaces/http/user/user.routes.js';
 import healthRoutes from './interfaces/http/health/health.routes.js';
 import publicRoutes from './interfaces/http/public/public.routes.js';
-
-import { authMiddleware } from './interfaces/http/middlewares/auth.middleware.js';
-import { checkRole, checkRoleOrOwner } from './interfaces/http/middlewares/check-role.middleware.js';
+import userRoutes from './interfaces/http/user/user.routes.js';
 
 import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
+import { createQueryMiddlewares } from './interfaces/http/middlewares/query.middlewares.js';
+import { userQueryConfig } from './interfaces/http/user/query-user-config.js';
 
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-
-// Middlewares globales que se aplican a todo el router user
-const globalMiddlewares = [cors(), helmet(), morgan('dev'), authMiddleware];
-
-// Rutas excluidas para middlewares (ejemplo: authMiddleware se excluye en estas rutas)
 const excludePathsByMiddleware = {
-  authMiddleware: ['/public', '/health'],
+  // Por ahora sin exclusiones específicas
 };
 
-// Middlewares específicos por ruta (dentro de /users)
-const userRouteMiddlewares = {
-  '/': [checkRole('admin')],
-  '/:id': [checkRoleOrOwner('admin')],
-  '/:id/deactivate': [checkRole('admin')],
-};
+const routeMiddlewares = {};
 
-// Router users con middlewares aplicados con flexibilidad
-const userRouter = wrapRouterWithFlexibleMiddlewares(userRoutes, {
-  globalMiddlewares,
+// Middlewares globales comunes (como helmet, cors, etc) pueden ir acá
+const globalMiddlewares = [];
+
+// 🧩 Inyectar middlewares de búsqueda en /users
+const userRouterWithMiddlewares = wrapRouterWithFlexibleMiddlewares(userRoutes, {
+  globalMiddlewares: createQueryMiddlewares(userQueryConfig),
   excludePathsByMiddleware,
-  routeMiddlewares: userRouteMiddlewares,
+  routeMiddlewares,
 });
 
-// Servidor principal que puede montar varios routers
-const server1 = new Server({
-  middlewares: [], // Ya aplicados en wrappers si corresponde
+// Otros routers sin búsqueda
+const healthRouter = wrapRouterWithFlexibleMiddlewares(healthRoutes, {
+  globalMiddlewares,
+  excludePathsByMiddleware,
+  routeMiddlewares,
+});
+
+const publicRouter = wrapRouterWithFlexibleMiddlewares(publicRoutes, {
+  globalMiddlewares,
+  excludePathsByMiddleware,
+  routeMiddlewares,
+});
+
+// Servidor
+const server = new Server({
+  middlewares: [],
   routes: [
-    { path: '/users', handler: userRouter },
-    { path: '/health', handler: healthRoutes },
-    { path: '/public', handler: publicRoutes },
+    { path: '/health', handler: healthRouter },
+    { path: '/public', handler: publicRouter },
+    { path: '/users', handler: userRouterWithMiddlewares },
   ],
 });
 
-server1.start(process.env.PORT || 3000);
+server.start(process.env.PORT || 3000);
