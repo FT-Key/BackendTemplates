@@ -45,12 +45,12 @@ Genera automáticamente una entidad completa, con:
 
 **Opciones disponibles:**
 
-| Opción             | Descripción |
-|--------------------|-------------|
-| `-y`               | Acepta todo sin preguntar |
-| `--json`           | Usa el archivo `./generator/entity-schema.json` como esquema de entidad |
-| `--json <file>`    | Usa el archivo JSON especificado como esquema |
-| `--schema-dir`     | Lista los esquemas JSON disponibles en `./generator/entity-schemas/` y permite elegir uno |
+| Opción          | Descripción                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `-y`            | Acepta todo sin preguntar                                                                 |
+| `--json`        | Usa el archivo `./generator/entity-schema.json` como esquema de entidad                   |
+| `--json <file>` | Usa el archivo JSON especificado como esquema                                             |
+| `--schema-dir`  | Lista los esquemas JSON disponibles en `./generator/entity-schemas/` y permite elegir uno |
 
 **Ejemplo de uso:**
 
@@ -71,6 +71,7 @@ Si solo escribes `--json` y presionas Enter, se mostrarán los archivos disponib
 **Instalación recomendada:**
 
 - **Windows (con Chocolatey):**
+
   ```bash
   choco install jq
   ```
@@ -93,6 +94,12 @@ Si ves errores como "bad interpreter" o fallos de ejecución en VSCode, puede qu
 ```bash
 dos2unix ./init-project.sh
 dos2unix ./entity-generator.sh
+```
+
+Comando para normalizar todos los archivos .sh desde consola:
+
+```bash
+find . -type f -name "*.sh" -exec dos2unix {} +
 ```
 
 > Instala `dos2unix` si no lo tienes:

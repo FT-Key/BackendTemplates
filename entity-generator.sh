@@ -5,9 +5,9 @@
 set -e
 
 # Cargar partes
-source ./generator/00-helpers.sh
-source ./generator/01-parse-args.sh "$@"
-source ./generator/02-load-schema.sh
+source ./generator/entity/00-helpers.sh
+source ./generator/entity/01-parse-args.sh "$@"
+source ./generator/entity/02-load-schema.sh
 
 echo "🛠 Generando entidad '$entity'..."
 
@@ -38,15 +38,15 @@ mkdir -p "src/interfaces/http/$entity"
 mkdir -p "tests/application/$entity"
 
 # Ejecutar partes de generación
-source ./generator/03-generate-domain.sh
-source ./generator/04-generate-validation.sh
-source ./generator/05-generate-factory.sh
-source ./generator/06-generate-constants.sh
-source ./generator/07-generate-repository.sh
-source ./generator/08-generate-usecases.sh
-source ./generator/09-generate-services.sh
-source ./generator/10-generate-controller.sh
-source ./generator/11-generate-routes.sh
-source ./generator/12-generate-tests.sh
+source ./generator/entity/03-generate-domain.sh
+source ./generator/entity/04-generate-validation.sh
+source ./generator/entity/05-generate-factory.sh
+source ./generator/entity/06-generate-constants.sh
+source ./generator/entity/07-generate-repository.sh
+source ./generator/entity/08-generate-usecases.sh
+source ./generator/entity/09-generate-services.sh
+source ./generator/entity/10-generate-controller.sh
+source ./generator/entity/11-generate-routes.sh
+source ./generator/entity/12-generate-tests.sh
 
 echo "✔️  Estructura generada para '$entity'"

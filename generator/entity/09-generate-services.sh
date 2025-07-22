@@ -14,4 +14,6 @@ export async function getActive${EntityPascal}s(repository) {
   return all.filter(item => item.active);
 }
 EOF
+
+  echo "✅ Servicios generado: $services_path"
 fi

@@ -23,4 +23,6 @@ router.patch('/:id/deactivate', deactivate${EntityPascal}Controller);
 
 export default router;
 EOF
+
+  echo "✅ Rutas generadas: $routes_file"
 fi

@@ -8,4 +8,6 @@ if confirm_action "¿Generar archivo constantes ($constants_file)?"; then
 
 export const DEFAULT_ACTIVE = true;
 EOF
+
+  echo "✅ Constantes generadas: $constants_file"
 fi
