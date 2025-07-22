@@ -4,63 +4,48 @@ import { InMemoryUserRepository } from '../../../src/infrastructure/user/in-memo
 import { CreateUser } from '../../../src/application/user/use-cases/create-user.js';
 
 async function testUserFactory() {
-  // Datos de ejemplo completos, incluyendo todos los campos opcionales
   const data = {
     id: '123',
-    name: 'Franco Toledo',
-    email: 'franco@example.com',
-    password: null,
     active: true,
     createdAt: new Date('2025-01-01T00:00:00Z'),
     updatedAt: new Date('2025-01-01T00:00:00Z'),
     deletedAt: null,
     ownedBy: null,
+
   };
-  const user = new User(data);
 
-  assert.strictEqual(user.id, data.id);
-  assert.strictEqual(user.name, data.name);
-  assert.strictEqual(user.email, data.email);
-  assert.strictEqual(user.active, data.active);
-  assert.strictEqual(user.password, data.password);
-  assert.strictEqual(user.deletedAt, data.deletedAt);
-  assert.strictEqual(user.ownedBy, data.ownedBy);
-  assert.deepStrictEqual(user.toJSON(), data);
+  const entity = new User(data);
 
+  assert.strictEqual(entity.id, data.id);
+  assert.strictEqual(entity.active, data.active);
+  assert.strictEqual(entity.deletedAt, null);
+  assert.strictEqual(entity.ownedBy, null);
   console.log('✅ User factory test passed');
 }
 
-async function testCreateUserUseCase() {
+async function testCreateUser() {
   const repo = new InMemoryUserRepository();
-  const createUser = new CreateUser(repo);
+  const create = new CreateUser(repo);
 
   const input = {
-    name: 'Franco Toledo',
-    email: 'franco@example.com',
-    password: '1234',
+
   };
 
-  const user = await createUser.execute(input);
+  const entity = await create.execute(input);
 
-  assert.strictEqual(user.name, input.name);
-  assert.strictEqual(user.email, input.email);
-  assert.strictEqual(user.password, input.password);
-  assert.ok(user.id, 'User id should be set');
-  assert.strictEqual(user.active, true); // valor por defecto
-
-  // Verificamos que deletedAt y ownedBy estén presentes y sean null
-  assert.strictEqual(user.deletedAt, null);
-  assert.strictEqual(user.ownedBy, null);
-
-  console.log('✅ CreateUser use case test passed');
+  assert.ok(entity.id, 'Debe asignar id');
+  assert.strictEqual(entity.active, true);
+  assert.strictEqual(entity.deletedAt, null);
+  assert.strictEqual(entity.ownedBy, null);
+  console.log('✅ create-user passed');
 }
 
-async function runTests() {
-  await testUserFactory();
-  await testCreateUserUseCase();
-}
+testUserFactory().catch(err => {
+  console.error('❌ factory-user failed', err);
+  process.exit(1);
+});
 
-runTests().catch(err => {
-  console.error('❌ Test failed:', err);
+testCreateUser().catch(err => {
+  console.error('❌ create-user failed', err);
   process.exit(1);
 });

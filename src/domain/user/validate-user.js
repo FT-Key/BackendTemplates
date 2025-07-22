@@ -1,5 +1,4 @@
-// src/domain/user/validate-user.js
 export function validateUser(data) {
-  if (!data.name) throw new Error('Name is required');
+  if (!data.id) throw new Error('id is required');
   return true;
 }

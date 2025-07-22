@@ -1,2 +1,3 @@
-// src/domain/user/constants.js
-export const USER_ROLES = ['admin', 'editor', 'viewer'];
+// Constantes relacionadas con User
+
+export const DEFAULT_ACTIVE = true;

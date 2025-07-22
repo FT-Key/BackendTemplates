@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1091
 
 if [ "$CREATE_MIDDLEWARES" != "true" ]; then
   echo "⏩ Skipping base middlewares..."
@@ -7,7 +8,22 @@ fi
 
 mkdir -p src/interfaces/http/middlewares
 
-cat <<'EOF' >src/interfaces/http/middlewares/auth.middleware.js
+create_file_if_not_exists() {
+  local filepath=$1
+  local content=$2
+
+  if [ -f "$filepath" ]; then
+    echo "⚠️  $filepath ya existe, no se sobrescribirá."
+  else
+    echo "$content" >"$filepath"
+    echo "✅ $filepath creado."
+  fi
+}
+
+# === Base Middlewares ===
+
+create_file_if_not_exists src/interfaces/http/middlewares/auth.middleware.js "$(
+  cat <<'EOF'
 export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -28,8 +44,10 @@ export function authMiddleware(req, res, next) {
   }
 }
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/middlewares/check-role.middleware.js
+create_file_if_not_exists src/interfaces/http/middlewares/check-role.middleware.js "$(
+  cat <<'EOF'
 export function checkRole(requiredRole) {
   return (req, res, next) => {
     const user = req.user;
@@ -51,8 +69,10 @@ export function checkRoleOrOwner(requiredRole) {
   };
 }
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/middlewares/error-handler.middleware.js
+create_file_if_not_exists src/interfaces/http/middlewares/error-handler.middleware.js "$(
+  cat <<'EOF'
 export default function errorHandler(err, req, res, next) {
   console.error('❌ Error capturado:', err.stack || err.message);
   res.status(err.status || 500).json({
@@ -62,8 +82,10 @@ export default function errorHandler(err, req, res, next) {
   });
 }
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/middlewares/rate-limiter.middleware.js
+create_file_if_not_exists src/interfaces/http/middlewares/rate-limiter.middleware.js "$(
+  cat <<'EOF'
 import rateLimit from 'express-rate-limit';
 
 export const rateLimiter = rateLimit({
@@ -74,15 +96,19 @@ export const rateLimiter = rateLimit({
   legacyHeaders: false,
 });
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/middlewares/request-logger.middleware.js
+create_file_if_not_exists src/interfaces/http/middlewares/request-logger.middleware.js "$(
+  cat <<'EOF'
 export function requestLogger(req, res, next) {
   console.log(`📥 ${req.method} ${req.originalUrl}`);
   next();
 }
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/middlewares/sanitize.middleware.js
+create_file_if_not_exists src/interfaces/http/middlewares/sanitize.middleware.js "$(
+  cat <<'EOF'
 import xss from 'xss-clean';
 import mongoSanitize from 'express-mongo-sanitize';
 
@@ -91,5 +117,9 @@ export const sanitizeMiddleware = [
   xss(),
 ];
 EOF
+)"
 
-echo "✅ Middlewares base generados"
+# ✅ Reutilizar generación de middlewares de query
+source ./generator/common/generate-query-middlewares.sh
+
+echo "✅ Middlewares base (incluyendo filtros, orden, búsqueda, paginación) verificados o generados."

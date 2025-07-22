@@ -8,15 +8,13 @@ export class Server {
   }
 
   setupMiddlewares() {
-    this.app.use(express.json()); // Middleware base
-    this.middlewares.forEach((mw) => {
-      this.app.use(mw); // Aplica uno por uno
-    });
+    this.app.use(express.json());
+    this.middlewares.forEach((mw) => this.app.use(mw));
   }
 
   setupRoutes() {
-    this.routes.forEach((route) => {
-      this.app.use(route.path, route.handler);
+    this.routes.forEach(({ path, handler }) => {
+      this.app.use(path, handler);
     });
   }
 
