@@ -39,4 +39,6 @@ export const deactivate${EntityPascal}Controller = async (req, res) => {
   res.json(item);
 };
 EOF
+
+  echo "✅ Controlador generado: $controller_file"
 fi

@@ -2,8 +2,6 @@
 # generator/project/02-create-folders.sh
 
 mkdir -p \
-  generator \
-  generator/entity-schemas \
   src/config \
   src/domain \
   src/infrastructure \

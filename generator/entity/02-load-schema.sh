@@ -4,8 +4,8 @@
 custom_fields='[]'
 schema_content='{}'
 
-SCHEMA_JSON="./generator/entity-schema.json"
-SCHEMA_DIR="./generator/entity-schemas"
+SCHEMA_JSON="./generator/entity/entity-schema.json"
+SCHEMA_DIR="./generator/entity/entity-schemas"
 
 while [[ $# -gt 0 ]]; do
   case $1 in

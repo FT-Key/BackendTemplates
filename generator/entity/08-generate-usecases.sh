@@ -138,3 +138,5 @@ for action in create get update delete deactivate; do
     generate_use_case "$action"
   fi
 done
+
+echo "✅ Casos de uso generados."
