@@ -54,7 +54,6 @@ export class InMemoryUserRepository {
         return userVal === filterVal;
       });
     }
-    console.log("repositorio 2", result);
 
     // Aplicar búsqueda por texto libre
     if (search && search.query && Array.isArray(search.fields)) {
@@ -69,7 +68,6 @@ export class InMemoryUserRepository {
         })
       );
     }
-    console.log("repositorio 3", result);
 
     // Aplicar orden solo si sort está definido
     if (sort && sort.sortBy) {
@@ -90,7 +88,6 @@ export class InMemoryUserRepository {
           : (aVal > bVal ? -1 : aVal < bVal ? 1 : 0);
       });
     }
-    console.log("repositorio 4", result);
 
     // Aplicar paginación si está definida
     if (pagination) {
@@ -98,7 +95,6 @@ export class InMemoryUserRepository {
       const limit = pagination.limit ?? result.length;
       result = result.slice(offset, offset + limit);
     }
-    console.log("repositorio 5", result);
 
     return result;
   }

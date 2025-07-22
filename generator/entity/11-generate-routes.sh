@@ -3,9 +3,19 @@
 # 5. ROUTES
 
 routes_file="src/interfaces/http/$entity/${entity}.routes.js"
+mkdir -p "$(dirname "$routes_file")"
 
-if confirm_action "¿Generar archivo de rutas ($routes_file)?"; then
-  cat <<EOF >"$routes_file"
+# Verificar si ya existe y si debe sobrescribirse
+if [[ -f "$routes_file" && "$AUTO_CONFIRM" != true ]]; then
+  read -r -p "⚠️  El archivo $routes_file ya existe. ¿Deseas sobrescribirlo? [y/n]: " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "⏭️  Rutas omitidas: $routes_file"
+    exit 0
+  fi
+fi
+
+# Generar archivo de rutas
+cat <<EOF >"$routes_file"
 import express from 'express';
 import {
   create${EntityPascal}Controller,
@@ -28,5 +38,4 @@ router.patch('/:id/deactivate', deactivate${EntityPascal}Controller);
 export default router;
 EOF
 
-  echo "✅ Rutas generadas: $routes_file"
-fi
+echo "✅ Rutas generadas: $routes_file"

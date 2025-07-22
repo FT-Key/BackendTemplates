@@ -3,9 +3,19 @@
 # 4. CONTROLLER
 
 controller_file="src/interfaces/http/$entity/${entity}.controller.js"
+mkdir -p "$(dirname "$controller_file")"
 
-if confirm_action "¿Generar controller ($controller_file)?"; then
-  cat <<EOF >"$controller_file"
+# Preguntar si ya existe, excepto si -y
+if [[ -f "$controller_file" && "$AUTO_CONFIRM" != true ]]; then
+  read -r -p "⚠️  El archivo $controller_file ya existe. ¿Deseas sobrescribirlo? [y/n]: " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "⏭️  Controlador omitido: $controller_file"
+    exit 0
+  fi
+fi
+
+# Generar el archivo
+cat <<EOF >"$controller_file"
 import { InMemory${EntityPascal}Repository } from '../../../infrastructure/$entity/in-memory-$entity-repository.js';
 
 import { Create${EntityPascal} } from '../../../application/$entity/use-cases/create-$entity.js';
@@ -50,7 +60,6 @@ export const deactivate${EntityPascal}Controller = async (req, res) => {
 
 export const list${EntityPascal}sController = async (req, res) => {
   const useCase = new List${EntityPascal}s(repository);
-  console.log("llega aqui");
   const items = await useCase.execute({
     filters: req.filters,
     search: req.search,
@@ -61,5 +70,4 @@ export const list${EntityPascal}sController = async (req, res) => {
 };
 EOF
 
-  echo "✅ Controlador generado: $controller_file"
-fi
+echo "✅ Controlador generado: $controller_file"

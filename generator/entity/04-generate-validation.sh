@@ -2,38 +2,43 @@
 # shellcheck disable=SC2154
 # 1.5 VALIDATE
 validate_file="src/domain/$entity/validate-$entity.js"
-if confirm_action "¿Generar validate ($validate_file)?"; then
-  # Usar el mismo método que ya funciona en el constructor
-  field_count=$(echo "$fields" | jq '. | length')
 
-  declare -a val_names
-  declare -a val_requireds
+# Preguntar si sobrescribir si el archivo existe
+if [[ -f "$validate_file" && "$AUTO_CONFIRM" != true ]]; then
+  read -r -p "⚠️  El archivo $validate_file ya existe. ¿Desea sobrescribirlo? [y/n]: " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "⏭️  Se omitió la generación de $validate_file"
+    exit 0
+  fi
+fi
 
-  # Llenar arrays campo por campo (mismo método que funciona arriba)
-  for ((i = 0; i < field_count; i++)); do
-    val_names[i]=$(echo "$fields" | jq -r ".[$i].name")
-    val_requireds[i]=$(echo "$fields" | jq -r ".[$i].required // false")
-  done
+# Generar validación
+field_count=$(echo "$fields" | jq '. | length')
 
-  validation_lines=""
+declare -a val_names
+declare -a val_requireds
 
-  for i in "${!val_names[@]}"; do
-    name="${val_names[i]}"
-    required="${val_requireds[i]}"
+for ((i = 0; i < field_count; i++)); do
+  val_names[i]=$(echo "$fields" | jq -r ".[$i].name")
+  val_requireds[i]=$(echo "$fields" | jq -r ".[$i].required // false")
+done
 
-    # Saltar si el nombre está vacío
-    [[ -z "$name" || "$name" == "null" ]] && continue
+validation_lines=""
+for i in "${!val_names[@]}"; do
+  name="${val_names[i]}"
+  required="${val_requireds[i]}"
 
-    if [[ "$required" == "true" ]]; then
-      validation_lines+="  if (!data.$name) throw new Error('$name is required');"$'\n'
-    fi
-  done
+  [[ -z "$name" || "$name" == "null" ]] && continue
 
-  cat <<EOF >"$validate_file"
+  if [[ "$required" == "true" ]]; then
+    validation_lines+="  if (!data.$name) throw new Error('$name is required');"$'\n'
+  fi
+done
+
+cat <<EOF >"$validate_file"
 export function validate${EntityPascal}(data) {
 $validation_lines  return true;
 }
 EOF
 
-  echo "✅ Validación generada: $validate_file"
-fi
+echo "✅ Validación generada: $validate_file"

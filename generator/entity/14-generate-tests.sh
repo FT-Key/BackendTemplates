@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # shellcheck disable=SC2154,SC2086
 
 TEST_PATH="tests/application/$entity"
@@ -22,10 +21,21 @@ for row in $(echo "$fields_js" | jq -c '.[]'); do
 done
 input_entries=$(echo -e "$input_entries" | sed '$s/,\n$//')
 
-# ------------- GENERAR TESTS -------------------
+# Función para crear test si no existe o si se confirma sobreescritura
+create_test_file() {
+  local file_path="$1"
+  shift
+  if [[ -f "$file_path" && "$AUTO_CONFIRM" != true ]]; then
+    read -rp "❗ El archivo $file_path ya existe. ¿Sobrescribir? (y/n): " confirm
+    [[ "$confirm" != "y" && "$confirm" != "Y" ]] && return
+  fi
+  cat >"$file_path" <<<"$*"
+  echo "✅ Test generado: $file_path"
+}
 
-# CREATE test (incluye factory test)
-cat >"$TEST_PATH/create-$entity.test.js" <<EOF
+# CREATE test (incluye factory)
+create_test_file "$TEST_PATH/create-$entity.test.js" "$(
+  cat <<EOF
 import assert from 'assert';
 import { $EntityPascal } from '../../../src/domain/$entity/${entity}.js';
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
@@ -48,17 +58,10 @@ $input_entries
   assert.strictEqual(entity.active, data.active);
   assert.strictEqual(entity.deletedAt, null);
   assert.strictEqual(entity.ownedBy, null);
-EOF
-
-# Agregar asserts para cada campo (excepto id, active, deletedAt, ownedBy)
-for row in $(echo "$fields_js" | jq -c '.[]'); do
-  name=$(jq -r '.name' <<<"$row")
-  cat >>"$TEST_PATH/create-$entity.test.js" <<EOF
-  assert.strictEqual(entity.$name, data.$name);
-EOF
-done
-
-cat >>"$TEST_PATH/create-$entity.test.js" <<EOF
+$(for row in $(echo "$fields_js" | jq -c '.[]'); do
+    name=$(jq -r '.name' <<<"$row")
+    echo "  assert.strictEqual(entity.$name, data.$name);"
+  done)
   console.log('✅ $EntityPascal factory test passed');
 }
 
@@ -76,16 +79,10 @@ $input_entries
   assert.strictEqual(entity.active, true);
   assert.strictEqual(entity.deletedAt, null);
   assert.strictEqual(entity.ownedBy, null);
-EOF
-
-for row in $(echo "$fields_js" | jq -c '.[]'); do
-  name=$(jq -r '.name' <<<"$row")
-  cat >>"$TEST_PATH/create-$entity.test.js" <<EOF
-  assert.strictEqual(entity.$name, input.$name);
-EOF
-done
-
-cat >>"$TEST_PATH/create-$entity.test.js" <<EOF
+$(for row in $(echo "$fields_js" | jq -c '.[]'); do
+    name=$(jq -r '.name' <<<"$row")
+    echo "  assert.strictEqual(entity.$name, input.$name);"
+  done)
   console.log('✅ create-$entity passed');
 }
 
@@ -99,9 +96,11 @@ testCreate${EntityPascal}().catch(err => {
   process.exit(1);
 });
 EOF
+)"
 
 # GET test
-cat >"$TEST_PATH/get-$entity.test.js" <<EOF
+create_test_file "$TEST_PATH/get-$entity.test.js" "$(
+  cat <<EOF
 import assert from 'assert';
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
 import { Create$EntityPascal } from '../../../src/application/$entity/use-cases/create-$entity.js';
@@ -128,9 +127,20 @@ testGet${EntityPascal}().catch(err => {
   process.exit(1);
 });
 EOF
+)"
 
 # UPDATE test
-cat >"$TEST_PATH/update-$entity.test.js" <<EOF
+update_input_entries=$(for row in $(echo "$fields_js" | jq -c '.[]'); do
+  name=$(jq -r '.name' <<<"$row")
+  echo "    $name: \"${name}_updated\","
+done)
+update_asserts=$(for row in $(echo "$fields_js" | jq -c '.[]'); do
+  name=$(jq -r '.name' <<<"$row")
+  echo "  assert.strictEqual(updated.$name, updateInput.$name);"
+done)
+
+create_test_file "$TEST_PATH/update-$entity.test.js" "$(
+  cat <<EOF
 import assert from 'assert';
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
 import { Create$EntityPascal } from '../../../src/application/$entity/use-cases/create-$entity.js';
@@ -148,28 +158,12 @@ $input_entries
   const created = await create.execute(input);
 
   const updateInput = {
-EOF
-
-# Para updateInput solo vamos a cambiar los valores, agregando _updated para distinguir
-for row in $(echo "$fields_js" | jq -c '.[]'); do
-  name=$(jq -r '.name' <<<"$row")
-  echo "    $name: \"${name}_updated\"," >>"$TEST_PATH/update-$entity.test.js"
-done
-
-cat >>"$TEST_PATH/update-$entity.test.js" <<EOF
+$update_input_entries
   };
 
   const updated = await update.execute(created.id, updateInput);
 
-EOF
-
-# Asserts para update
-for row in $(echo "$fields_js" | jq -c '.[]'); do
-  name=$(jq -r '.name' <<<"$row")
-  echo "  assert.strictEqual(updated.$name, updateInput.$name);" >>"$TEST_PATH/update-$entity.test.js"
-done
-
-cat >>"$TEST_PATH/update-$entity.test.js" <<EOF
+$update_asserts
   console.log('✅ update-$entity passed');
 }
 
@@ -178,9 +172,11 @@ testUpdate${EntityPascal}().catch(err => {
   process.exit(1);
 });
 EOF
+)"
 
 # DELETE test
-cat >"$TEST_PATH/delete-$entity.test.js" <<EOF
+create_test_file "$TEST_PATH/delete-$entity.test.js" "$(
+  cat <<EOF
 import assert from 'assert';
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
 import { Create$EntityPascal } from '../../../src/application/$entity/use-cases/create-$entity.js';
@@ -212,9 +208,11 @@ testDelete${EntityPascal}().catch(err => {
   process.exit(1);
 });
 EOF
+)"
 
 # DEACTIVATE test
-cat >"$TEST_PATH/deactivate-$entity.test.js" <<EOF
+create_test_file "$TEST_PATH/deactivate-$entity.test.js" "$(
+  cat <<EOF
 import assert from 'assert';
 import { InMemory${EntityPascal}Repository } from '../../../src/infrastructure/$entity/in-memory-${entity}-repository.js';
 import { Create$EntityPascal } from '../../../src/application/$entity/use-cases/create-$entity.js';
@@ -248,5 +246,6 @@ testDeactivate${EntityPascal}().catch(err => {
   process.exit(1);
 });
 EOF
+)"
 
 echo "✅ Tests generados: $TEST_PATH"

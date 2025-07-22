@@ -9,8 +9,14 @@ fi
 
 echo "📦 Verificando e instalando dependencias necesarias..."
 
-# Lista de dependencias
-declare -a dependencies=("express" "path-to-regexp" "cors" "helmet" "morgan" "dotenv")
+# Instalar express primero
+if ! grep -q '"express"' package.json; then
+  echo "📦 Instalando express..."
+  npm install express
+fi
+
+# Lista de dependencias restantes (sin express)
+declare -a dependencies=("path-to-regexp" "cors" "helmet" "morgan" "dotenv")
 for dep in "${dependencies[@]}"; do
   if ! grep -q "\"$dep\"" package.json; then
     echo "📦 Instalando $dep..."
@@ -19,7 +25,7 @@ for dep in "${dependencies[@]}"; do
 done
 
 # Dependencias de desarrollo
-if ! grep -q "\"nodemon\"" package.json; then
+if ! grep -q '"nodemon"' package.json; then
   echo "🛠️ Instalando nodemon (dev)..."
   npm install --save-dev nodemon
 fi
@@ -43,17 +49,17 @@ fi
 
 tmp_file="package.tmp.json"
 
-start_exists=$(jq '.scripts.start' package.json)
-dev_exists=$(jq '.scripts.dev' package.json)
-
+# Asegurar que "scripts" exista
 jq 'if .scripts == null then .scripts = {} else . end' package.json >"$tmp_file" && mv "$tmp_file" package.json
 
-if [ "$start_exists" = "null" ]; then
+# Agregar script start si no existe
+if [ "$(jq '.scripts.start' package.json)" = "null" ]; then
   jq '.scripts.start = "node src/index.js"' package.json >"$tmp_file" && mv "$tmp_file" package.json
   echo "✅ Script start agregado"
 fi
 
-if [ "$dev_exists" = "null" ]; then
+# Agregar script dev si no existe
+if [ "$(jq '.scripts.dev' package.json)" = "null" ]; then
   jq '.scripts.dev = "nodemon src/index.js"' package.json >"$tmp_file" && mv "$tmp_file" package.json
   echo "✅ Script dev agregado"
 fi
