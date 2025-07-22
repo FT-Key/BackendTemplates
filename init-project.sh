@@ -4,9 +4,26 @@ set -e
 
 echo "📁 Generando estructura base del proyecto..."
 
+# Verifica si Node.js está instalado
+if ! command -v node &>/dev/null; then
+  echo "❌ Node.js no está instalado. Por favor instálalo primero."
+  exit 1
+fi
+
+# Inicializar npm si no existe
+if [ ! -f package.json ]; then
+  echo "📦 Inicializando proyecto Node..."
+  npm init -y
+fi
+
+# Instalar Express si no está
+if [ ! -d "node_modules/express" ]; then
+  echo "📦 Instalando Express..."
+  npm install express
+fi
+
 # Archivos raíz
 touch .gitignore .prettierrc entity-scheme.json estructura.txt README.md
-echo "{}" >package.json
 echo "{}" >package-lock.json
 
 # Directorios principales
@@ -28,12 +45,12 @@ mkdir -p \
   tests/application/user \
   tests/interfaces/http/middlewares
 
-# Generator scripts
+# Generator placeholder
 for i in {00..12}; do
   touch "generator/${i}-generate-placeholder.sh"
 done
 
-# Archivos base del generador
+# Archivo de esquema de ejemplo
 cat <<'EOF' >generator/entity-schemas/user.json
 {
   "name": "user",
@@ -53,61 +70,161 @@ cat <<'EOF' >generator/entity-schemas/user.json
 }
 EOF
 
-# Archivos base de configuración
+# server.js (clase Server)
 cat <<'EOF' >src/config/server.js
-// TODO: Inicializar servidor aquí
+import express from 'express';
+
+export class Server {
+  constructor({ routes = [], middlewares = [] } = {}) {
+    this.app = express();
+    this.routes = routes;
+    this.middlewares = middlewares;
+  }
+
+  setupMiddlewares() {
+    this.app.use(express.json());
+    this.middlewares.forEach((mw) => this.app.use(mw));
+  }
+
+  setupRoutes() {
+    this.routes.forEach(({ path, handler }) => {
+      this.app.use(path, handler);
+    });
+  }
+
+  start(port = 3000) {
+    this.setupMiddlewares();
+    this.setupRoutes();
+
+    this.app.listen(port, () => {
+      console.log(`🚀 Servidor iniciado en http://localhost:${port}`);
+    });
+  }
+
+  getApp() {
+    return this.app;
+  }
+}
 EOF
 
-# Archivos base de dominio
-touch src/domain/user/user.js
-touch src/domain/user/constants.js
-touch src/domain/user/user-factory.js
-touch src/domain/user/validate-user.js
+# health.routes.js
+cat <<'EOF' >src/interfaces/http/health/health.routes.js
+import express from 'express';
 
-# Infraestructura
-touch src/infrastructure/user/in-memory-user-repository.js
+const router = express.Router();
 
-# Servicios (application)
-touch src/application/user/services/user-hasher.js
-touch src/application/user/services/user-validator.js
-touch src/application/user/services/get-active-users.js
-touch src/application/user/services/generate-user-id.js
+router.get('/', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
 
-# Casos de uso
-touch src/application/user/use-cases/create-user.js
-touch src/application/user/use-cases/get-user.js
-touch src/application/user/use-cases/update-user.js
-touch src/application/user/use-cases/delete-user.js
-touch src/application/user/use-cases/deactivate-user.js
+export default router;
+EOF
 
-# Middlewares
-touch src/interfaces/http/middlewares/auth.middleware.js
-touch src/interfaces/http/middlewares/check-role.middleware.js
-touch src/interfaces/http/middlewares/error-handler.middleware.js
-touch src/interfaces/http/middlewares/rate-limiter.middleware.js
-touch src/interfaces/http/middlewares/request-logger.middleware.js
-touch src/interfaces/http/middlewares/sanitize.middleware.js
+# public.routes.js
+cat <<'EOF' >src/interfaces/http/public/public.routes.js
+import express from 'express';
 
-# Interfaces HTTP
-touch src/interfaces/http/user/user.controller.js
-touch src/interfaces/http/user/user.routes.js
-touch src/interfaces/http/auth/auth.controller.js
-touch src/interfaces/http/auth/auth.routes.js
-touch src/interfaces/http/health/health.routes.js
-touch src/interfaces/http/public/public.routes.js
+const router = express.Router();
 
-# Utilidades
-touch src/utils/wrap-router-with-flexible-middlewares.js
+router.get('/info', (req, res) => {
+  res.json({ app: 'Backend Template', version: '1.0.0', description: 'Información pública' });
+});
 
-# Entrypoint
-touch src/index.js
+export default router;
+EOF
 
-# Tests
-touch tests/application/user/create-user.test.js
-touch tests/application/user/get-user.test.js
-touch tests/application/user/update-user.test.js
-touch tests/application/user/delete-user.test.js
-touch tests/application/user/deactivate-user.test.js
-touch tests/interfaces/http/middlewares/check-role.test.js
+# wrap-router-with-flexible-middlewares.js
+cat <<'EOF' >src/utils/wrap-router-with-flexible-middlewares.js
+import express from 'express';
+import { match } from 'path-to-regexp';
 
-echo "✅ Estructura del proyecto generada con éxito."
+export function wrapRouterWithFlexibleMiddlewares(router, options = {}) {
+  const {
+    globalMiddlewares = [],
+    excludePathsByMiddleware = {},
+    routeMiddlewares = {},
+  } = options;
+
+  const wrapped = express.Router();
+
+  globalMiddlewares.forEach((mw) => {
+    const mwName = mw.name || 'anonymous';
+
+    wrapped.use((req, res, next) => {
+      const excludes = excludePathsByMiddleware[mwName] || [];
+      if (excludes.some(path => match(path, { decode: decodeURIComponent })(req.path))) {
+        return next();
+      }
+      return mw(req, res, next);
+    });
+  });
+
+  wrapped.use((req, res, next) => {
+    for (const pattern in routeMiddlewares) {
+      const isMatch = match(pattern, { decode: decodeURIComponent })(req.path);
+      if (isMatch) {
+        const mws = routeMiddlewares[pattern];
+        if (!mws.length) return next();
+
+        let i = 0;
+        function run(i) {
+          if (i >= mws.length) return next();
+          mws[i](req, res, () => run(i + 1));
+        }
+        return run(0);
+      }
+    }
+    return next();
+  });
+
+  wrapped.use(router);
+
+  return wrapped;
+}
+EOF
+
+# index.js con placeholders
+cat <<'EOF' >src/index.js
+import { Server } from './config/server.js';
+import healthRoutes from './interfaces/http/health/health.routes.js';
+import publicRoutes from './interfaces/http/public/public.routes.js';
+import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
+
+// IMPORTAR MIDDLEWARES Y RUTAS AQUÍ
+// import userRoutes from './interfaces/http/user/user.routes.js';
+// import { authMiddleware } from './interfaces/http/middlewares/auth.middleware.js';
+// import { checkRole } from './interfaces/http/middlewares/check-role.middleware.js';
+
+// Middlewares globales
+const globalMiddlewares = []; // Ej: [cors(), helmet(), morgan('dev'), authMiddleware]
+
+// Exclusiones por middleware
+const excludePathsByMiddleware = {
+  // authMiddleware: ['/public', '/health']
+};
+
+// Middlewares por ruta
+const routeMiddlewares = {
+  // '/': [checkRole('admin')],
+};
+
+// Envuelve rutas con middlewares (si aplica)
+// const userRouter = wrapRouterWithFlexibleMiddlewares(userRoutes, {
+//   globalMiddlewares,
+//   excludePathsByMiddleware,
+//   routeMiddlewares,
+// });
+
+const server = new Server({
+  middlewares: [], // Ya aplicados en routers si es necesario
+  routes: [
+    // { path: '/users', handler: userRouter },
+    { path: '/health', handler: healthRoutes },
+    { path: '/public', handler: publicRoutes },
+  ],
+});
+
+server.start(process.env.PORT || 3000);
+EOF
+
+echo "✅ Proyecto generado con éxito. Puedes comenzar a desarrollar tu API."
