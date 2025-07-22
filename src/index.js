@@ -5,7 +5,7 @@ import healthRoutes from './interfaces/http/health/health.routes.js';
 import publicRoutes from './interfaces/http/public/public.routes.js';
 
 import { authMiddleware } from './interfaces/http/middlewares/auth.middleware.js';
-import { checkRole } from './interfaces/http/middlewares/check-role.middleware.js';
+import { checkRole, checkRoleOrOwner } from './interfaces/http/middlewares/check-role.middleware.js';
 
 import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
 
