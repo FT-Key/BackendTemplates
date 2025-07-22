@@ -4,7 +4,16 @@ set -e
 
 echo "📁 Generando estructura base del proyecto..."
 
-# Verifica si Node.js está instalado
+# Preguntar si se desea generar archivos de ejemplo para 'user'
+read -p "¿Deseas generar archivos de ejemplo para la entidad 'user'? (s/N): " response
+response=${response,,} # convertir a minúsculas
+if [[ "$response" == "s" || "$response" == "si" || "$response" == "y" ]]; then
+  CREATE_USER=true
+else
+  CREATE_USER=false
+fi
+
+# Verificar si Node.js está instalado
 if ! command -v node &>/dev/null; then
   echo "❌ Node.js no está instalado. Por favor instálalo primero."
   exit 1
@@ -16,11 +25,9 @@ if [ ! -f package.json ]; then
   npm init -y
 fi
 
-# Instalar Express si no está
-if [ ! -d "node_modules/express" ]; then
-  echo "📦 Instalando Express..."
-  npm install express
-fi
+# Instalar dependencias base
+echo "📦 Instalando dependencias necesarias..."
+npm install express path-to-regexp
 
 # Archivos raíz
 touch .gitignore .prettierrc entity-scheme.json estructura.txt README.md
@@ -31,27 +38,64 @@ mkdir -p \
   generator \
   generator/entity-schemas \
   src/config \
-  src/domain/user \
-  src/infrastructure/user \
+  src/domain \
+  src/infrastructure \
   src/infrastructure/database \
-  src/interfaces/http/user \
   src/interfaces/http/health \
-  src/interfaces/http/auth \
   src/interfaces/http/public \
   src/interfaces/http/middlewares \
-  src/application/user/use-cases \
-  src/application/user/services \
+  src/application \
   src/utils \
-  tests/application/user \
+  tests/application \
   tests/interfaces/http/middlewares
 
-# Generator placeholder
-for i in {00..12}; do
-  touch "generator/${i}-generate-placeholder.sh"
-done
+# Si se desea, generar estructura de ejemplo para 'user'
+if [ "$CREATE_USER" = true ]; then
+  echo "🧪 Generando archivos de ejemplo para 'user'..."
 
-# Archivo de esquema de ejemplo
-cat <<'EOF' >generator/entity-schemas/user.json
+  mkdir -p \
+    src/domain/user \
+    src/infrastructure/user \
+    src/interfaces/http/user \
+    src/application/user/services \
+    src/application/user/use-cases \
+    tests/application/user
+
+  # Archivos de dominio
+  touch src/domain/user/user.js
+  touch src/domain/user/constants.js
+  touch src/domain/user/user-factory.js
+  touch src/domain/user/validate-user.js
+
+  # Infraestructura
+  touch src/infrastructure/user/in-memory-user-repository.js
+
+  # Servicios
+  touch src/application/user/services/user-hasher.js
+  touch src/application/user/services/user-validator.js
+  touch src/application/user/services/get-active-users.js
+  touch src/application/user/services/generate-user-id.js
+
+  # Casos de uso
+  touch src/application/user/use-cases/create-user.js
+  touch src/application/user/use-cases/get-user.js
+  touch src/application/user/use-cases/update-user.js
+  touch src/application/user/use-cases/delete-user.js
+  touch src/application/user/use-cases/deactivate-user.js
+
+  # Interfaces HTTP
+  touch src/interfaces/http/user/user.controller.js
+  touch src/interfaces/http/user/user.routes.js
+
+  # Tests
+  touch tests/application/user/create-user.test.js
+  touch tests/application/user/get-user.test.js
+  touch tests/application/user/update-user.test.js
+  touch tests/application/user/delete-user.test.js
+  touch tests/application/user/deactivate-user.test.js
+
+  # Esquema de entidad
+  cat <<'EOF' >generator/entity-schemas/user.json
 {
   "name": "user",
   "fields": [
@@ -69,8 +113,9 @@ cat <<'EOF' >generator/entity-schemas/user.json
   ]
 }
 EOF
+fi
 
-# server.js (clase Server)
+# Archivos base de config y rutas
 cat <<'EOF' >src/config/server.js
 import express from 'express';
 
@@ -107,7 +152,6 @@ export class Server {
 }
 EOF
 
-# health.routes.js
 cat <<'EOF' >src/interfaces/http/health/health.routes.js
 import express from 'express';
 
@@ -120,7 +164,6 @@ router.get('/', (req, res) => {
 export default router;
 EOF
 
-# public.routes.js
 cat <<'EOF' >src/interfaces/http/public/public.routes.js
 import express from 'express';
 
@@ -133,7 +176,6 @@ router.get('/info', (req, res) => {
 export default router;
 EOF
 
-# wrap-router-with-flexible-middlewares.js
 cat <<'EOF' >src/utils/wrap-router-with-flexible-middlewares.js
 import express from 'express';
 import { match } from 'path-to-regexp';
@@ -183,7 +225,6 @@ export function wrapRouterWithFlexibleMiddlewares(router, options = {}) {
 }
 EOF
 
-# index.js con placeholders
 cat <<'EOF' >src/index.js
 import { Server } from './config/server.js';
 import healthRoutes from './interfaces/http/health/health.routes.js';
@@ -227,4 +268,4 @@ const server = new Server({
 server.start(process.env.PORT || 3000);
 EOF
 
-echo "✅ Proyecto generado con éxito. Puedes comenzar a desarrollar tu API."
+echo "✅ Proyecto generado con éxito. ¡Listo para empezar!"
