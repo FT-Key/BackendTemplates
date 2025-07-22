@@ -5,9 +5,9 @@ set -e
 echo "📁 Generando estructura base del proyecto..."
 
 # Preguntar si se desea generar archivos de ejemplo para 'user'
-read -p "¿Deseas generar archivos de ejemplo para la entidad 'user'? (s/N): " response
+read -p "¿Deseas generar archivos de ejemplo para la entidad 'user'? (y/n): " response
 response=${response,,} # convertir a minúsculas
-if [[ "$response" == "s" || "$response" == "si" || "$response" == "y" ]]; then
+if [[ "$response" == "y" || "$response" == "yes" || "$response" == "s" || "$response" == "si" ]]; then
   CREATE_USER=true
 else
   CREATE_USER=false
@@ -25,12 +25,19 @@ if [ ! -f package.json ]; then
   npm init -y
 fi
 
-# Instalar dependencias base
-echo "📦 Instalando dependencias necesarias..."
-npm install express path-to-regexp
+# Instalar express y path-to-regexp si no están en package.json
+if ! grep -q '"express"' package.json; then
+  echo "📦 Instalando express..."
+  npm install express
+fi
+
+if ! grep -q '"path-to-regexp"' package.json; then
+  echo "📦 Instalando path-to-regexp..."
+  npm install path-to-regexp
+fi
 
 # Archivos raíz
-touch .gitignore .prettierrc entity-scheme.json estructura.txt README.md
+touch .gitignore .prettierrc estructura.txt README.md
 echo "{}" >package-lock.json
 
 # Directorios principales
@@ -231,35 +238,29 @@ import healthRoutes from './interfaces/http/health/health.routes.js';
 import publicRoutes from './interfaces/http/public/public.routes.js';
 import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
 
-// IMPORTAR MIDDLEWARES Y RUTAS AQUÍ
-// import userRoutes from './interfaces/http/user/user.routes.js';
-// import { authMiddleware } from './interfaces/http/middlewares/auth.middleware.js';
-// import { checkRole } from './interfaces/http/middlewares/check-role.middleware.js';
+// IMPORTAR RUTAS DE TEST Y MIDDLEWARES AQUÍ
+// import testRoutes from './interfaces/http/test/test.routes.js';
+// import { exampleMiddleware } from './interfaces/http/middlewares/example.middleware.js';
 
-// Middlewares globales
-const globalMiddlewares = []; // Ej: [cors(), helmet(), morgan('dev'), authMiddleware]
-
-// Exclusiones por middleware
+const globalMiddlewares = [];
 const excludePathsByMiddleware = {
-  // authMiddleware: ['/public', '/health']
+  // exampleMiddleware: ['/public', '/health']
 };
 
-// Middlewares por ruta
 const routeMiddlewares = {
-  // '/': [checkRole('admin')],
+  // '/': [exampleMiddleware],
 };
 
-// Envuelve rutas con middlewares (si aplica)
-// const userRouter = wrapRouterWithFlexibleMiddlewares(userRoutes, {
+// const testRouter = wrapRouterWithFlexibleMiddlewares(testRoutes, {
 //   globalMiddlewares,
 //   excludePathsByMiddleware,
 //   routeMiddlewares,
 // });
 
 const server = new Server({
-  middlewares: [], // Ya aplicados en routers si es necesario
+  middlewares: [],
   routes: [
-    // { path: '/users', handler: userRouter },
+    // { path: '/test', handler: testRouter },
     { path: '/health', handler: healthRoutes },
     { path: '/public', handler: publicRoutes },
   ],
