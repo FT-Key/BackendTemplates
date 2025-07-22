@@ -55,4 +55,6 @@ export class InMemory${EntityPascal}Repository {
   }
 }
 EOF
+
+  echo "✅ Adaptador generado: $infra_file"
 fi

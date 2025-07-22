@@ -249,4 +249,4 @@ testDeactivate${EntityPascal}().catch(err => {
 });
 EOF
 
-echo "✅ Tests generados en $TEST_PATH"
+echo "✅ Tests generados: $TEST_PATH"

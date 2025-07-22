@@ -19,4 +19,6 @@ export class ${EntityPascal}Factory {
   }
 }
 EOF
+
+  echo "✅ Fabrica generada: $factory_file"
 fi
