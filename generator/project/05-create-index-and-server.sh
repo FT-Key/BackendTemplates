@@ -81,7 +81,7 @@ export class Server {
 EOF
 )"
 
-# 2) Generar index.js igual que antes
+# 2) Generar index.js
 write_file_with_confirm "src/index.js" "$(
   cat <<'EOF'
 import { Server } from './config/server.js';
@@ -529,4 +529,86 @@ write_file_with_confirm "src/public/index.html" "$(
 EOF
 )"
 
-echo "✅ server.js, index.js e index.html generados correctamente."
+# 2) Generar health.routes.js
+write_file_with_confirm "src/interfaces/http/health/health.routes.js" "$(
+  cat <<'EOF'
+import express from 'express';
+
+const router = express.Router();
+
+router.get('/', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+export default router;
+EOF
+)"
+
+# 2) Generar public.routes.js
+write_file_with_confirm "src/interfaces/http/public/public.routes.js" "$(
+  cat <<'EOF'
+import express from 'express';
+
+const router = express.Router();
+
+router.get('/info', (req, res) => {
+  res.json({ app: 'Backend Template', version: '1.0.0', description: 'Información pública' });
+});
+
+export default router;
+EOF
+)"
+
+# 2) Generar wrap-router-with-flexible-middlewares.js
+write_file_with_confirm "src/utils/wrap-router-with-flexible-middlewares.js" "$(
+  cat <<'EOF'
+import express from 'express';
+import { match } from 'path-to-regexp';
+
+export function wrapRouterWithFlexibleMiddlewares(router, options = {}) {
+  const {
+    globalMiddlewares = [],
+    excludePathsByMiddleware = {},
+    routeMiddlewares = {},
+  } = options;
+
+  const wrapped = express.Router();
+
+  globalMiddlewares.forEach((mw) => {
+    const mwName = mw.name || 'anonymous';
+
+    wrapped.use((req, res, next) => {
+      const excludes = excludePathsByMiddleware[mwName] || [];
+      if (excludes.some(path => match(path, { decode: decodeURIComponent })(req.path))) {
+        return next();
+      }
+      return mw(req, res, next);
+    });
+  });
+
+  wrapped.use((req, res, next) => {
+    for (const pattern in routeMiddlewares) {
+      const isMatch = match(pattern, { decode: decodeURIComponent })(req.path);
+      if (isMatch) {
+        const mws = routeMiddlewares[pattern];
+        if (!mws.length) return next();
+
+        let i = 0;
+        function run(i) {
+          if (i >= mws.length) return next();
+          mws[i](req, res, () => run(i + 1));
+        }
+        return run(0);
+      }
+    }
+    return next();
+  });
+
+  wrapped.use(router);
+
+  return wrapped;
+}
+EOF
+)"
+
+echo "✅ server.js, index.js, index.html, health.routes.js, publuc.routes.js y wrap-router-with-flexible-middlewares.js generados correctamente."
