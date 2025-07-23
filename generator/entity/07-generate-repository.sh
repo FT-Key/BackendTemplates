@@ -14,7 +14,7 @@ fi
 
 cat <<EOF >"$infra_file"
 import { $EntityPascal } from '../../domain/$entity/$entity.js';
-import { mock${EntityPascal}s } from '../../domain/$entity/mocks.js';
+import { mock${EntityPascal} } from '../../domain/$entity/mocks.js';
 
 export class InMemory${EntityPascal}Repository {
   constructor() {
