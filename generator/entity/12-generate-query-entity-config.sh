@@ -37,7 +37,7 @@ filterable_js=$(array_to_js_list "${sorted_fields[@]}")
 
 # Generar archivo de salida
 mkdir -p "src/interfaces/http/$entity_lc"
-output_file="src/interfaces/http/${entity_lc}/${entity_lc}.query-config.js"
+output_file="src/interfaces/http/${entity_lc}/query-${entity_lc}-config.js"
 
 cat >"$output_file" <<EOF
 // Configuración de query para la entidad $entity

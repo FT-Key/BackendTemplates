@@ -50,5 +50,6 @@ source ./generator/entity/11-generate-routes.sh
 source ./generator/entity/12-generate-query-entity-config.sh
 source ./generator/entity/13-generate-query-middlewares.sh
 source ./generator/entity/14-generate-tests.sh
+source ./generator/entity/15-update-index.sh
 
 echo "✔️  Estructura generada para '$entity'"

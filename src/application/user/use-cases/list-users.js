@@ -12,7 +12,6 @@ export class ListUsers {
    * @returns {Promise<User[]>}
    */
   async execute({ filters, search, pagination, sort }) {
-    console.log("entra al middleware")
     return this.repository.findAll({ filters, search, pagination, sort });
   }
 }
