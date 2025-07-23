@@ -21,6 +21,16 @@
       "name": "isAvailable",
       "params": ["quantity"],
       "body": "return this.stock >= quantity;"
+    },
+    {
+      "name": "applyDiscount",
+      "params": ["percentage"],
+      "body": "this._price = this._price * (1 - percentage / 100); this._touchUpdatedAt();"
+    },
+    {
+      "name": "resetPrice",
+      "params": [],
+      "body": "this._price = 0; this._touchUpdatedAt();"
     }
   ]
 }
