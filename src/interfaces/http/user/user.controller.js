@@ -42,7 +42,6 @@ export const deactivateUserController = async (req, res) => {
 
 export const listUsersController = async (req, res) => {
   const useCase = new ListUsers(repository);
-  console.log("llega aqui")
   const users = await useCase.execute({
     filters: req.filters,
     search: req.search,

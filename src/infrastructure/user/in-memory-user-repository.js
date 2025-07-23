@@ -38,7 +38,6 @@ export class InMemoryUserRepository {
   async findAll(options = {}) {
     const { filters = {}, search = null, pagination = null, sort = null } = options;
     let result = [...this.items];
-    console.log("repositorio 1", result);
 
     // Aplicar filtros exactos (case-insensitive para strings)
     for (const key in filters) {
