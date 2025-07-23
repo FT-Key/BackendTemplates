@@ -143,8 +143,8 @@ write_file_with_confirm "src/public/index.html" "$(
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hexagon</title>
   <style>
     * {
@@ -214,7 +214,7 @@ write_file_with_confirm "src/public/index.html" "$(
       background: radial-gradient(ellipse at center, rgba(0, 255, 157, 0.1) 0%, rgba(0, 0, 0, 1) 70%);
     }
 
-    /* Hexágono 3D */
+    /* Anillo Hexagonal 3D */
     .hexagon-container {
       perspective: 1000px;
       perspective-origin: center center;
@@ -225,67 +225,109 @@ write_file_with_confirm "src/public/index.html" "$(
       height: 200px;
       position: relative;
       transform-style: preserve-3d;
-      animation: rotate 16s linear infinite;
+      animation: rotate 15s linear infinite alternate;
     }
 
-    .hexagon-face {
+    .hexagon-segment {
       position: absolute;
-      width: 200px;
-      height: 200px;
+      width: 100px;
+      height: 30px;
+      transform-style: preserve-3d;
+      left: 50%;
+      top: 50%;
+      margin-left: -50px;
+      margin-top: -15px;
+    }
+
+    .segment-face {
+      position: absolute;
       background: linear-gradient(45deg,
-          rgba(0, 255, 157, 0.2) 0%,
-          rgba(0, 255, 255, 0.2) 50%,
-          rgba(157, 0, 255, 0.2) 100%);
-      border: 2px solid #00ff9d;
-      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+          rgba(0, 255, 157, 1) 0%,
+          rgba(0, 255, 255, 1) 50%,
+          rgba(0, 255, 157, 1) 100%);
+      border: 1px solid #00ff9d;
       box-shadow:
-        0 0 20px rgba(0, 255, 157, 0.5),
-        inset 0 0 20px rgba(0, 255, 157, 0.1);
+        0 0 15px rgba(0, 255, 157, 0.6),
+        inset 0 0 10px rgba(0, 255, 157, 0.2);
+      transition: all 1s ease;
+    }
+
+    .face-front,
+    .face-back {
+      width: 100px;
+      height: 30px;
+    }
+
+    .face-left,
+    .face-right {
+      width: 20px;
+      height: 30px;
+    }
+
+    .face-top,
+    .face-bottom {
+      width: 100px;
+      height: 20px;
     }
 
     .face-front {
-      transform: translateZ(50px);
+      transform: translateZ(10px);
     }
 
     .face-back {
-      transform: translateZ(-50px) rotateY(180deg);
-    }
-
-    .face-right {
-      transform: rotateY(90deg) translateZ(50px);
+      transform: translateZ(-10px);
     }
 
     .face-left {
-      transform: rotateY(-90deg) translateZ(50px);
+      transform: rotateY(-90deg) translateZ(10px);
+    }
+
+    .face-right {
+      transform: rotateY(90deg) translateZ(90px);
     }
 
     .face-top {
-      transform: rotateX(90deg) translateZ(50px);
+      transform: rotateX(90deg) translateZ(15px);
     }
 
     .face-bottom {
-      transform: rotateX(-90deg) translateZ(50px);
+      transform: rotateX(-90deg) translateZ(15px);
+    }
+
+    .segment-1 {
+      transform: translateZ(80px) rotateY(0deg);
+    }
+
+    .segment-2 {
+      transform: rotateY(60deg) translateZ(80px);
+    }
+
+    .segment-3 {
+      transform: rotateY(120deg) translateZ(80px);
+    }
+
+    .segment-4 {
+      transform: rotateY(180deg) translateZ(80px);
+    }
+
+    .segment-5 {
+      transform: rotateY(240deg) translateZ(80px);
+    }
+
+    .segment-6 {
+      transform: rotateY(300deg) translateZ(80px);
     }
 
     @keyframes rotate {
       0% {
-        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
-      }
-
-      33% {
-        transform: rotateX(120deg) rotateY(120deg) rotateZ(0deg);
-      }
-
-      66% {
-        transform: rotateX(240deg) rotateY(240deg) rotateZ(120deg);
+        transform: rotateY(90deg) rotateX(100deg);
       }
 
       100% {
-        transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+        transform: rotateY(450deg) rotateX(100deg);
       }
     }
 
-    /* Efectos de brillo adicionales */
     .glow-ring {
       position: absolute;
       top: 50%;
@@ -311,20 +353,16 @@ write_file_with_confirm "src/public/index.html" "$(
     }
 
     @keyframes pulse {
-
-      0%,
-      100% {
+      0%, 100% {
         transform: translate(-50%, -50%) scale(1);
         opacity: 0.5;
       }
-
       50% {
         transform: translate(-50%, -50%) scale(1.1);
         opacity: 0.8;
       }
     }
 
-    /* Partículas de fondo */
     .particles {
       position: absolute;
       width: 100%;
@@ -343,18 +381,14 @@ write_file_with_confirm "src/public/index.html" "$(
     }
 
     @keyframes float {
-
-      0%,
-      100% {
+      0%, 100% {
         transform: translateY(0px) rotate(0deg);
       }
-
       50% {
         transform: translateY(-20px) rotate(180deg);
       }
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
       .navbar {
         padding: 0 1rem;
@@ -373,10 +407,27 @@ write_file_with_confirm "src/public/index.html" "$(
         font-size: 0.8rem;
       }
 
-      .hexagon,
-      .hexagon-face {
-        width: 150px;
-        height: 150px;
+      .hexagon-segment {
+        width: 120px;
+        height: 120px;
+      }
+
+      .segment-face.face-front,
+      .segment-face.face-back {
+        width: 75px;
+        height: 22px;
+      }
+
+      .segment-face.face-left,
+      .segment-face.face-right {
+        width: 15px;
+        height: 22px;
+      }
+
+      .segment-face.face-top,
+      .segment-face.face-bottom {
+        width: 75px;
+        height: 15px;
       }
 
       .glow-ring {
@@ -388,34 +439,73 @@ write_file_with_confirm "src/public/index.html" "$(
 </head>
 
 <body>
-  <!-- Navbar -->
   <nav class="navbar">
     <div class="logo">HEXAGON</div>
     <div class="nav-links">
       <a href="/health">Health</a>
-      <a href="/public/info">Public</a>
+      <a href="/public">Public</a>
     </div>
   </nav>
 
-  <!-- Container principal -->
   <div class="container">
     <div class="particles" id="particles"></div>
 
     <div class="hexagon-container">
       <div class="glow-ring"></div>
       <div class="hexagon">
-        <div class="hexagon-face face-front"></div>
-        <div class="hexagon-face face-back"></div>
-        <div class="hexagon-face face-right"></div>
-        <div class="hexagon-face face-left"></div>
-        <div class="hexagon-face face-top"></div>
-        <div class="hexagon-face face-bottom"></div>
+        <div class="hexagon-segment segment-1">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
+        <div class="hexagon-segment segment-2">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
+        <div class="hexagon-segment segment-3">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
+        <div class="hexagon-segment segment-4">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
+        <div class="hexagon-segment segment-5">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
+        <div class="hexagon-segment segment-6">
+          <div class="segment-face face-front"></div>
+          <div class="segment-face face-back"></div>
+          <div class="segment-face face-left"></div>
+          <div class="segment-face face-right"></div>
+          <div class="segment-face face-top"></div>
+          <div class="segment-face face-bottom"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Generar partículas flotantes
     function createParticles() {
       const particlesContainer = document.getElementById('particles');
       const particleCount = 30;
@@ -423,33 +513,15 @@ write_file_with_confirm "src/public/index.html" "$(
       for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
-
-        // Posición aleatoria
         particle.style.left = Math.random() * 100 + '%';
         particle.style.top = Math.random() * 100 + '%';
-
-        // Delay aleatorio para la animación
         particle.style.animationDelay = Math.random() * 6 + 's';
-
-        // Duración aleatoria
         particle.style.animationDuration = (3 + Math.random() * 4) + 's';
-
         particlesContainer.appendChild(particle);
       }
     }
 
-    // Inicializar partículas cuando carga la página
     document.addEventListener('DOMContentLoaded', createParticles);
-
-    // Efecto hover en el hexágono
-    const hexagon = document.querySelector('.hexagon');
-    hexagon.addEventListener('mouseenter', function () {
-      this.style.animationDuration = '8s';
-    });
-
-    hexagon.addEventListener('mouseleave', function () {
-      this.style.animationDuration = '16s';
-    });
   </script>
 </body>
 
