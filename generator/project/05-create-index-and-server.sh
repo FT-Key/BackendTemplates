@@ -227,6 +227,12 @@ write_file_with_confirm "src/public/index.html" "$(
       transform-style: preserve-3d;
       animation: rotate 15s linear infinite alternate;
     }
+    
+    .hexagon:hover .segment-face {
+      box-shadow:
+        0 0 40px rgba(0, 255, 157, 0.6),
+        inset 0 0 25px rgba(0, 255, 157, 0.2);
+    }
 
     .hexagon-segment {
       position: absolute;
@@ -443,7 +449,7 @@ write_file_with_confirm "src/public/index.html" "$(
     <div class="logo">HEXAGON</div>
     <div class="nav-links">
       <a href="/health">Health</a>
-      <a href="/public">Public</a>
+      <a href="/public/info">Public</a>
     </div>
   </nav>
 
