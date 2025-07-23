@@ -1,18 +1,33 @@
 #!/bin/bash
 # shellcheck disable=SC2154
-# 2. INFRASTRUCTURE/REPOSITORY
+# Generador de repositorios InMemory y Database para una entidad
 
-infra_file="src/infrastructure/$entity/in-memory-${entity}-repository.js"
+infra_dir="src/infrastructure"
+in_memory_file="$infra_dir/$entity/in-memory-${entity}-repository.js"
+database_file="$infra_dir/$entity/database-${entity}-repository.js"
 
-if [[ -f "$infra_file" && "$AUTO_CONFIRM" != true ]]; then
-  read -r -p "⚠️  El archivo $infra_file ya existe. ¿Deseas sobrescribirlo? [y/n]: " confirm
-  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo "⏭️  Repositorio omitido: $infra_file"
-    exit 0
+created_files=()
+
+write_file_with_confirm() {
+  local filepath=$1
+  local content=$2
+
+  if [[ -f "$filepath" && "$AUTO_CONFIRM" != true ]]; then
+    read -r -p "⚠️  El archivo $filepath ya existe. ¿Deseas sobrescribirlo? [y/n]: " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+      echo "⏭️  Archivo omitido: $filepath"
+      return 1
+    fi
   fi
-fi
 
-cat <<EOF >"$infra_file"
+  echo "$content" >"$filepath"
+  created_files+=("$filepath")
+}
+
+mkdir -p "$infra_dir/$entity"
+
+write_file_with_confirm "$in_memory_file" "$(
+  cat <<EOF
 import { $EntityPascal } from '../../domain/$entity/$entity.js';
 import { mock${EntityPascal} } from '../../domain/$entity/mocks.js';
 import {
@@ -84,5 +99,55 @@ export class InMemory${EntityPascal}Repository {
   }
 }
 EOF
+)"
 
-echo "✅ Adaptador generado: $infra_file"
+write_file_with_confirm "$database_file" "$(
+  cat <<EOF
+// Archivo base para implementar acceso a base de datos para ${EntityPascal}
+
+export class Database${EntityPascal}Repository {
+  constructor() {
+    // TODO: inicializar conexión o cliente de base de datos
+  }
+
+  async save(item) {
+    // TODO: implementar guardado en base de datos
+    throw new Error('Método save() no implementado');
+  }
+
+  async findById(id) {
+    // TODO: implementar búsqueda por ID en base de datos
+    throw new Error('Método findById() no implementado');
+  }
+
+  async findAll(options = {}) {
+    // TODO: implementar búsqueda con filtros, búsqueda, paginación y orden
+    throw new Error('Método findAll() no implementado');
+  }
+
+  async update(id, data) {
+    // TODO: implementar actualización en base de datos
+    throw new Error('Método update() no implementado');
+  }
+
+  async deleteById(id) {
+    // TODO: implementar borrado en base de datos
+    throw new Error('Método deleteById() no implementado');
+  }
+
+  async deactivateById(id) {
+    // TODO: implementar desactivación en base de datos
+    throw new Error('Método deactivateById() no implementado');
+  }
+}
+EOF
+)"
+
+if [ ${#created_files[@]} -gt 0 ]; then
+  echo "✅ Repositorios generados:"
+  for f in "${created_files[@]}"; do
+    echo "   - $f"
+  done
+else
+  echo "⚠️ No se creó ningún archivo."
+fi
