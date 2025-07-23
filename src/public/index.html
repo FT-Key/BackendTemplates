@@ -1,144 +1,3 @@
-#!/bin/bash
-# generator/project/04-create-index-and-server.sh
-# shellcheck disable=SC1091
-
-source ../generator/common/confirm-action.sh
-
-write_file_with_confirm() {
-  local filepath=$1
-  local content=$2
-
-  if [[ -f "$filepath" ]]; then
-    if [[ "$AUTO_YES" == true ]]; then
-      echo "⚠️  El archivo $filepath ya existe. Sobrescribiendo por opción -y."
-      echo "$content" >"$filepath"
-    else
-      if confirm_action "⚠️  El archivo $filepath ya existe. ¿Desea sobrescribirlo? (y/n): "; then
-        echo "$content" >"$filepath"
-      else
-        echo "❌ No se sobrescribió $filepath"
-        return 1
-      fi
-    fi
-  else
-    echo "$content" >"$filepath"
-  fi
-}
-
-mkdir -p src/public
-
-# 1) Generar server.js con serve estático y ruta /
-write_file_with_confirm "src/config/server.js" "$(
-  cat <<'EOF'
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Definir __dirname en ESModules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export class Server {
-  constructor({ routes = [], middlewares = [] } = {}) {
-    this.app = express();
-    this.routes = routes;
-    this.middlewares = middlewares;
-  }
-
-  setupMiddlewares() {
-    this.app.use(express.json());
-
-    // Servir archivos estáticos desde la carpeta 'src/public'
-    this.app.use(express.static(path.resolve(__dirname, '../public')));
-
-    this.middlewares.forEach((mw) => this.app.use(mw));
-  }
-
-  setupRoutes() {
-    this.routes.forEach(({ path: routePath, handler }) => {
-      this.app.use(routePath, handler);
-    });
-
-    // Ruta raíz para servir index.html explícitamente
-    this.app.get('/', (req, res) => {
-      res.sendFile(path.resolve(__dirname, '../public/index.html'));
-    });
-  }
-
-  start(port = 3000) {
-    this.setupMiddlewares();
-    this.setupRoutes();
-
-    this.app.listen(port, () => {
-      console.log(`🚀 Servidor iniciado en http://localhost:${port}`);
-    });
-  }
-
-  getApp() {
-    return this.app;
-  }
-}
-EOF
-)"
-
-# 2) Generar index.js igual que antes
-write_file_with_confirm "src/index.js" "$(
-  cat <<'EOF'
-import { Server } from './config/server.js';
-
-import healthRoutes from './interfaces/http/health/health.routes.js';
-import publicRoutes from './interfaces/http/public/public.routes.js';
-
-// import entityRoutes from './interfaces/http/entity/entity.routes.js';
-
-import { wrapRouterWithFlexibleMiddlewares } from './utils/wrap-router-with-flexible-middlewares.js';
-import { createQueryMiddlewares } from './interfaces/http/middlewares/query.middlewares.js';
-// import { entityQueryConfig } from './interfaces/http/entity/query-entity-config.js';
-
-const excludePathsByMiddleware = {
-  // Por ahora sin exclusiones específicas
-};
-
-const routeMiddlewares = {};
-
-// Middlewares globales comunes (como helmet, cors, etc) pueden ir acá
-const globalMiddlewares = [];
-
-// Ejemplo de cómo inyectar middlewares de búsqueda en /entity
-// const entityRouterWithMiddlewares = wrapRouterWithFlexibleMiddlewares(entityRoutes, {
-//   globalMiddlewares: createQueryMiddlewares(entityQueryConfig),
-//   excludePathsByMiddleware,
-//   routeMiddlewares,
-// });
-
-const healthRouter = wrapRouterWithFlexibleMiddlewares(healthRoutes, {
-  globalMiddlewares,
-  excludePathsByMiddleware,
-  routeMiddlewares,
-});
-
-const publicRouter = wrapRouterWithFlexibleMiddlewares(publicRoutes, {
-  globalMiddlewares,
-  excludePathsByMiddleware,
-  routeMiddlewares,
-});
-
-const server = new Server({
-  middlewares: [],
-  routes: [
-    { path: '/health', handler: healthRouter },
-    { path: '/public', handler: publicRouter },
-    // { path: '/entity', handler: entityRouterWithMiddlewares },
-  ],
-});
-
-server.start(process.env.PORT || 3000);
-EOF
-)"
-
-# 3) Generar index.html completo en src/public
-write_file_with_confirm "src/public/index.html" "$(
-  cat <<'EOF'
 <!DOCTYPE html>
 <html lang="es">
 
@@ -226,6 +85,12 @@ write_file_with_confirm "src/public/index.html" "$(
       position: relative;
       transform-style: preserve-3d;
       animation: rotate 15s linear infinite alternate;
+
+      &:hover .segment-face {
+        box-shadow:
+          0 0 40px rgba(0, 255, 157, 0.6),
+          inset 0 0 25px rgba(0, 255, 157, 0.2);
+      }
     }
 
     .hexagon-segment {
@@ -239,6 +104,7 @@ write_file_with_confirm "src/public/index.html" "$(
       margin-top: -15px;
     }
 
+    /* Caras de cada cuboide */
     .segment-face {
       position: absolute;
       background: linear-gradient(45deg,
@@ -294,6 +160,7 @@ write_file_with_confirm "src/public/index.html" "$(
       transform: rotateX(-90deg) translateZ(15px);
     }
 
+    /* Posicionamiento de cada cuboide en el anillo */
     .segment-1 {
       transform: translateZ(80px) rotateY(0deg);
     }
@@ -328,6 +195,8 @@ write_file_with_confirm "src/public/index.html" "$(
       }
     }
 
+
+    /* Efectos de brillo adicionales */
     .glow-ring {
       position: absolute;
       top: 50%;
@@ -353,16 +222,20 @@ write_file_with_confirm "src/public/index.html" "$(
     }
 
     @keyframes pulse {
-      0%, 100% {
+
+      0%,
+      100% {
         transform: translate(-50%, -50%) scale(1);
         opacity: 0.5;
       }
+
       50% {
         transform: translate(-50%, -50%) scale(1.1);
         opacity: 0.8;
       }
     }
 
+    /* Partículas de fondo */
     .particles {
       position: absolute;
       width: 100%;
@@ -381,14 +254,18 @@ write_file_with_confirm "src/public/index.html" "$(
     }
 
     @keyframes float {
-      0%, 100% {
+
+      0%,
+      100% {
         transform: translateY(0px) rotate(0deg);
       }
+
       50% {
         transform: translateY(-20px) rotate(180deg);
       }
     }
 
+    /* Responsive */
     @media (max-width: 768px) {
       .navbar {
         padding: 0 1rem;
@@ -439,6 +316,7 @@ write_file_with_confirm "src/public/index.html" "$(
 </head>
 
 <body>
+  <!-- Navbar -->
   <nav class="navbar">
     <div class="logo">HEXAGON</div>
     <div class="nav-links">
@@ -447,6 +325,7 @@ write_file_with_confirm "src/public/index.html" "$(
     </div>
   </nav>
 
+  <!-- Container principal -->
   <div class="container">
     <div class="particles" id="particles"></div>
 
@@ -506,6 +385,7 @@ write_file_with_confirm "src/public/index.html" "$(
   </div>
 
   <script>
+    // Generar partículas flotantes
     function createParticles() {
       const particlesContainer = document.getElementById('particles');
       const particleCount = 30;
@@ -513,20 +393,24 @@ write_file_with_confirm "src/public/index.html" "$(
       for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
+
+        // Posición aleatoria
         particle.style.left = Math.random() * 100 + '%';
         particle.style.top = Math.random() * 100 + '%';
+
+        // Delay aleatorio para la animación
         particle.style.animationDelay = Math.random() * 6 + 's';
+
+        // Duración aleatoria
         particle.style.animationDuration = (3 + Math.random() * 4) + 's';
+
         particlesContainer.appendChild(particle);
       }
     }
 
+    // Inicializar partículas cuando carga la página
     document.addEventListener('DOMContentLoaded', createParticles);
   </script>
 </body>
 
 </html>
-EOF
-)"
-
-echo "✅ server.js, index.js e index.html generados correctamente."

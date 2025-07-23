@@ -1,4 +1,10 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Definir __dirname en ESModules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class Server {
   constructor({ routes = [], middlewares = [] } = {}) {
@@ -9,12 +15,21 @@ export class Server {
 
   setupMiddlewares() {
     this.app.use(express.json());
+
+    // Servir archivos estáticos desde la carpeta 'src/public'
+    this.app.use(express.static(path.resolve(__dirname, '../public')));
+
     this.middlewares.forEach((mw) => this.app.use(mw));
   }
 
   setupRoutes() {
-    this.routes.forEach(({ path, handler }) => {
-      this.app.use(path, handler);
+    this.routes.forEach(({ path: routePath, handler }) => {
+      this.app.use(routePath, handler);
+    });
+
+    // Ruta raíz para servir index.html explícitamente
+    this.app.get('/', (req, res) => {
+      res.sendFile(path.resolve(__dirname, '../public/index.html'));
     });
   }
 
