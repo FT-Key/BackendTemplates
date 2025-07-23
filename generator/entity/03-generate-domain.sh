@@ -126,6 +126,14 @@ if [[ ${#tojson_lines[@]} -gt 0 ]]; then
   tojson_lines[-1]="${tojson_lines[-1]%,}"
 fi
 
+if [[ -f "$domain_file" && "$AUTO_CONFIRM" != true ]]; then
+  read -r -p "⚠️  El archivo $domain_file ya existe. ¿Desea sobrescribirlo? [y/n]: " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "⏭️  Se omitió la escritura de $domain_file"
+    exit 0
+  fi
+fi
+
 # Escritura del archivo
 {
   echo "export class $ENTITY_PASCAL {"

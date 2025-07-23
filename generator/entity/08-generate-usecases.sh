@@ -1,11 +1,29 @@
 #!/bin/bash
 # shellcheck disable=SC2154
 
+# Función para pluralizar de forma simple (puede mejorarse)
+pluralize() {
+  local word="$1"
+  if [[ "$word" == *s ]]; then
+    echo "${word}es"
+  else
+    echo "${word}s"
+  fi
+}
+
 # Función para generar casos de uso
 generate_use_case() {
   local action=$1
   local file_path="src/application/$entity/use-cases/${action}-${entity}.js"
   mkdir -p "$(dirname "$file_path")"
+
+  if [[ -f "$file_path" && "$AUTO_CONFIRM" != true ]]; then
+    read -r -p "⚠️  El archivo $file_path ya existe. ¿Deseas sobrescribirlo? []: " confirm
+    if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
+      echo "⏭️  Omitido: $file_path"
+      return
+    fi
+  fi
 
   if [[ "$action" == "create" ]]; then
     {
@@ -44,10 +62,8 @@ generate_use_case() {
       echo ""
       echo "  async execute(id, data) {"
       echo "    if (!id) throw new Error('${EntityPascal} id is required');"
-      echo ""
       echo "    const existing = await this.repository.findById(id);"
       echo "    if (!existing) throw new Error('${EntityPascal} not found');"
-      echo ""
       if $has_json; then
         echo "    const updated = ${EntityPascal}Factory.create({"
         echo "      ...existing,"
@@ -56,7 +72,6 @@ generate_use_case() {
         echo "    });"
         echo "    return this.repository.save(updated);"
       else
-        echo "    // TODO: completar lógica con atributos personalizados"
         echo "    const updated = { ...existing, ...data };"
         echo "    return this.repository.save(updated);"
       fi
@@ -67,17 +82,10 @@ generate_use_case() {
   elif [[ "$action" == "get" ]]; then
     {
       echo "export class Get${EntityPascal} {"
-      echo "  /**"
-      echo "   * @param {Object} repository  Debe tener método findById(id)"
-      echo "   */"
       echo "  constructor(repository) {"
       echo "    this.repository = repository;"
       echo "  }"
       echo ""
-      echo "  /**"
-      echo "   * @param {string} id"
-      echo "   * @returns {Promise<${EntityPascal}|null>}"
-      echo "   */"
       echo "  async execute(id) {"
       echo "    if (!id) throw new Error('${EntityPascal} id is required');"
       echo "    return this.repository.findById(id);"
@@ -88,17 +96,10 @@ generate_use_case() {
   elif [[ "$action" == "delete" ]]; then
     {
       echo "export class Delete${EntityPascal} {"
-      echo "  /**"
-      echo "   * @param {Object} repository Debe tener método deleteById(id)"
-      echo "   */"
       echo "  constructor(repository) {"
       echo "    this.repository = repository;"
       echo "  }"
       echo ""
-      echo "  /**"
-      echo "   * @param {string} id"
-      echo "   * @returns {Promise<boolean>} true si ${entity} se eliminó, false si no existe"
-      echo "   */"
       echo "  async execute(id) {"
       echo "    if (!id) throw new Error('${EntityPascal} id is required');"
       echo "    return this.repository.deleteById(id);"
@@ -109,34 +110,53 @@ generate_use_case() {
   elif [[ "$action" == "deactivate" ]]; then
     {
       echo "export class Deactivate${EntityPascal} {"
-      echo "  /**"
-      echo "   * @param {Object} repository Debe tener métodos findById(id) y save(${entity})"
-      echo "   */"
+      echo "  constructor(repository) {"
+      echo "    this.repository = repository;"
+      echo "  }"
+      echo ""
+      echo "  async execute(id) {"
+      echo "    if (!id) throw new Error('${EntityPascal} id is required');"
+      echo "    return this.repository.deactivateById(id);"
+      echo "  }"
+      echo "}"
+    } >"$file_path"
+
+  elif [[ "$action" == "list" ]]; then
+    local plural_pascal
+    plural_pascal="$(pluralize "$EntityPascal")"
+    {
+      echo "export class List${plural_pascal} {"
       echo "  constructor(repository) {"
       echo "    this.repository = repository;"
       echo "  }"
       echo ""
       echo "  /**"
-      echo "   * @param {string} id"
-      echo "   * @returns {Promise<${EntityPascal}|null>} Devuelve el ${entity} desactivado o null si no existe"
+      echo "   * @param {Object} options"
+      echo "   * @param {Object} options.filters"
+      echo "   * @param {string} options.search"
+      echo "   * @param {Object} options.pagination"
+      echo "   * @param {Object} options.sort"
+      echo "   * @returns {Promise<${EntityPascal}[]>}"
       echo "   */"
-      echo "  async execute(id) {"
-      echo "    if (!id) throw new Error('${EntityPascal} id is required');"
-      echo "    const result = await this.repository.deactivateById(id);"
-      echo "    return result;"
+      echo "  async execute({ filters, search, pagination, sort }) {"
+      echo "    return this.repository.findAll({ filters, search, pagination, sort });"
       echo "  }"
       echo "}"
     } >"$file_path"
-
   fi
 }
 
 # 3. USE CASES
-for action in create get update delete deactivate; do
+for action in create get update delete deactivate list; do
   usecase_file="src/application/$entity/use-cases/${action}-${entity}.js"
-  if confirm_action "¿Generar caso de uso $action ($usecase_file)?"; then
-    generate_use_case "$action"
+  if [[ -f "$usecase_file" && "$AUTO_CONFIRM" != true ]]; then
+    read -r -p "⚠️  Ya existe $usecase_file. ¿Sobrescribir? [y/n]: " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+      echo "⏭️  Omitido: $usecase_file"
+      continue
+    fi
   fi
+  generate_use_case "$action"
 done
 
 echo "✅ Casos de uso generados."

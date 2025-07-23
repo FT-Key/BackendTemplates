@@ -47,8 +47,8 @@ create_or_overwrite() {
   local content="$2"
 
   if [ -f "$file" ]; then
-    read -rp "⚠️ El archivo '$file' ya existe. ¿Deseas sobrescribirlo? (s/n): " confirm
-    if [[ "$confirm" =~ ^[Ss]$ ]]; then
+    read -rp "⚠️ El archivo '$file' ya existe. ¿Deseas sobrescribirlo? (y/n): " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
       echo "$content" >"$file"
       echo "✅ Archivo '$file' sobrescrito."
     else

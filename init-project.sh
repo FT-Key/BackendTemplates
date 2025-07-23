@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1091
 
 set -e
 
@@ -7,6 +8,9 @@ INIT_ARGS=("$@")
 
 # Ejecutar primer módulo para parsear args
 bash ./generator/project/00-parse-args.sh
+
+# Importar función confirm_action para usarla acá y en los scripts secundarios
+source ./generator/common/confirm-action.sh
 
 # Usar variable AUTO_YES para definir flags de creación
 if [ "$AUTO_YES" = true ]; then

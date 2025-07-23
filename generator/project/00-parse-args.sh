@@ -1,11 +1,13 @@
 #!/bin/bash
+# 00-parse-args.sh
 
-# Por defecto no auto-yes
-export AUTO_YES=false
-
-# Recorrer argumentos recibidos (guardados en INIT_ARGS)
+# Procesar argumentos para detectar -y / --yes
+AUTO_YES=false
 for arg in "${INIT_ARGS[@]}"; do
   if [[ "$arg" == "-y" || "$arg" == "--yes" ]]; then
-    export AUTO_YES=true
+    AUTO_YES=true
+    break
   fi
 done
+
+export AUTO_YES

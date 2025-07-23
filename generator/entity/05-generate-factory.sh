@@ -2,8 +2,18 @@
 # shellcheck disable=SC2154
 # 1.6 FACTORY (src/domain/$entity/$entity-factory.js)
 factory_file="src/domain/$entity/${entity}-factory.js"
-if confirm_action "¿Generar método fábrica ($factory_file)?"; then
-  cat <<EOF >"$factory_file"
+
+# Preguntar si sobrescribir si el archivo existe
+if [[ -f "$factory_file" && "$AUTO_CONFIRM" != true ]]; then
+  read -r -p "⚠️  El archivo $factory_file ya existe. ¿Desea sobrescribirlo? [y/n]: " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "⏭️  Se omitió la generación de $factory_file"
+    exit 0
+  fi
+fi
+
+# Generar archivo factory
+cat <<EOF >"$factory_file"
 import { $EntityPascal } from './$entity.js';
 import { validate${EntityPascal} } from './validate-$entity.js';
 
@@ -20,5 +30,4 @@ export class ${EntityPascal}Factory {
 }
 EOF
 
-  echo "✅ Fabrica generada: $factory_file"
-fi
+echo "✅ Fabrica generada: $factory_file"

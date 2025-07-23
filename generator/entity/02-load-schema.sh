@@ -14,7 +14,6 @@ if [[ "$USE_JSON" == true ]]; then
   read -r input_path
 
   if [[ -z "$input_path" ]]; then
-    # Mostrar lista de archivos JSON en SCHEMA_DIR
     if [[ ! -d "$SCHEMA_DIR" ]]; then
       echo "❌ Directorio no existe: $SCHEMA_DIR"
       exit 1
@@ -53,8 +52,17 @@ if [[ "$USE_JSON" == true ]]; then
     echo "❌ No se pudo leer el nombre de la entidad del JSON."
     exit 1
   fi
+
+  # ✅ Extraer campos personalizados del JSON
+  custom_fields=$(jq '.fields // []' "$SCHEMA_JSON")
+
+  # ✅ Extraer métodos personalizados (opcional)
+  custom_methods=$(jq '.methods // []' "$SCHEMA_JSON")
+
 else
   read -r -p "📝 Nombre de la entidad (ej. user, product): " entity
+  custom_fields='[]'
+  custom_methods='[]'
 fi
 
 # ---------------------

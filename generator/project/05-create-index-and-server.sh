@@ -1,7 +1,33 @@
 #!/bin/bash
 # generator/project/04-create-index-and-server.sh
+# shellcheck disable=SC1091
 
-cat <<'EOF' >src/config/server.js
+source ../generator/common/confirm-action.sh
+
+write_file_with_confirm() {
+  local filepath=$1
+  local content=$2
+
+  if [[ -f "$filepath" ]]; then
+    if [[ "$AUTO_YES" == true ]]; then
+      echo "⚠️  El archivo $filepath ya existe. Sobrescribiendo por opción -y."
+      echo "$content" >"$filepath"
+    else
+      if confirm_action "⚠️  El archivo $filepath ya existe. ¿Desea sobrescribirlo? (y/n): "; then
+        echo "$content" >"$filepath"
+      else
+        echo "❌ No se sobrescribió $filepath"
+      fi
+    fi
+  else
+    echo "$content" >"$filepath"
+  fi
+}
+
+# Ahora guardás cada archivo con esta función para que pregunte o sobrescriba según corresponda
+
+write_file_with_confirm "src/config/server.js" "$(
+  cat <<'EOF'
 import express from 'express';
 
 export class Server {
@@ -36,8 +62,10 @@ export class Server {
   }
 }
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/health/health.routes.js
+write_file_with_confirm "src/interfaces/http/health/health.routes.js" "$(
+  cat <<'EOF'
 import express from 'express';
 
 const router = express.Router();
@@ -48,8 +76,10 @@ router.get('/', (req, res) => {
 
 export default router;
 EOF
+)"
 
-cat <<'EOF' >src/interfaces/http/public/public.routes.js
+write_file_with_confirm "src/interfaces/http/public/public.routes.js" "$(
+  cat <<'EOF'
 import express from 'express';
 
 const router = express.Router();
@@ -60,8 +90,10 @@ router.get('/info', (req, res) => {
 
 export default router;
 EOF
+)"
 
-cat <<'EOF' >src/utils/wrap-router-with-flexible-middlewares.js
+write_file_with_confirm "src/utils/wrap-router-with-flexible-middlewares.js" "$(
+  cat <<'EOF'
 import express from 'express';
 import { match } from 'path-to-regexp';
 
@@ -109,8 +141,10 @@ export function wrapRouterWithFlexibleMiddlewares(router, options = {}) {
   return wrapped;
 }
 EOF
+)"
 
-cat <<'EOF' >src/index.js
+write_file_with_confirm "src/index.js" "$(
+  cat <<'EOF'
 import { Server } from './config/server.js';
 
 import healthRoutes from './interfaces/http/health/health.routes.js';
@@ -161,5 +195,6 @@ const server = new Server({
 
 server.start(process.env.PORT || 3000);
 EOF
+)"
 
 echo "✅ index.js y configuración de servidor generados."
