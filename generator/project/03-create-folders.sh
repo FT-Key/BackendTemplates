@@ -11,6 +11,7 @@ mkdir -p \
   src/interfaces/http/middlewares \
   src/application \
   src/utils \
+  src/public \
   tests/application \
   tests/interfaces/http/middlewares
 
