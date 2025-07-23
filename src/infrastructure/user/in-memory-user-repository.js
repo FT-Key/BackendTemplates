@@ -1,5 +1,6 @@
 import { User } from '../../domain/user/user.js';
-import { mockUsers } from '../../domain/user/mocks.js';
+import { mockUser } from '../../domain/user/mocks.js';
+import { applyFilters, applySearch, applySort, applyPagination } from '../../utils/query-utils.js';
 
 export class InMemoryUserRepository {
   constructor() {
@@ -40,60 +41,16 @@ export class InMemoryUserRepository {
     let result = [...this.items];
 
     // Aplicar filtros exactos (case-insensitive para strings)
-    for (const key in filters) {
-      const filterVal = filters[key];
-      result = result.filter(user => {
-        const userVal = user[key]; // accede al getter público
-        if (typeof userVal === 'string' && typeof filterVal === 'string') {
-          return userVal.toLowerCase() === filterVal.toLowerCase();
-        }
-        if (typeof userVal === 'boolean') {
-          return userVal === (filterVal === 'true');
-        }
-        return userVal === filterVal;
-      });
-    }
+    result = applyFilters(result, options.filters);
 
     // Aplicar búsqueda por texto libre
-    if (search && search.query && Array.isArray(search.fields)) {
-      const q = search.query.toLowerCase();
-      result = result.filter(user =>
-        search.fields.some(field => {
-          const val = user[field];
-          if (typeof val === 'string') {
-            return val.toLowerCase().includes(q);
-          }
-          return false;
-        })
-      );
-    }
+    result = applySearch(result, options.search);
 
     // Aplicar orden solo si sort está definido
-    if (sort && sort.sortBy) {
-      const { sortBy, order = 'asc' } = sort;
-      result.sort((a, b) => {
-        const aVal = a[sortBy];
-        const bVal = b[sortBy];
-        if (aVal == null && bVal != null) return order === 'asc' ? -1 : 1;
-        if (aVal != null && bVal == null) return order === 'asc' ? 1 : -1;
-        if (aVal == null && bVal == null) return 0;
-
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-
-        return order === 'asc'
-          ? (aVal < bVal ? -1 : aVal > bVal ? 1 : 0)
-          : (aVal > bVal ? -1 : aVal < bVal ? 1 : 0);
-      });
-    }
+    result = applySort(result, options.sort);
 
     // Aplicar paginación si está definida
-    if (pagination) {
-      const offset = pagination.offset ?? 0;
-      const limit = pagination.limit ?? result.length;
-      result = result.slice(offset, offset + limit);
-    }
+    result = applyPagination(result, options.pagination);
 
     return result;
   }

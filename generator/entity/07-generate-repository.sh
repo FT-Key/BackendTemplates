@@ -15,6 +15,12 @@ fi
 cat <<EOF >"$infra_file"
 import { $EntityPascal } from '../../domain/$entity/$entity.js';
 import { mock${EntityPascal} } from '../../domain/$entity/mocks.js';
+import {
+  applyFilters,
+  applySearch,
+  applySort,
+  applyPagination
+} from '../../utils/query-utils.js';
 
 export class InMemory${EntityPascal}Repository {
   constructor() {
@@ -39,70 +45,18 @@ export class InMemory${EntityPascal}Repository {
   /**
    * Buscar todos con opciones de filtros, búsqueda, paginación y orden
    * @param {Object} [options]
-   * @param {Object} [options.filters] - pares { campo: valor } para filtrar exacto (case-insensitive para strings)
-   * @param {Object} [options.search] - { query: string, fields: string[] } para búsqueda por texto libre
-   * @param {Object} [options.pagination] - { limit: number, offset: number }
-   * @param {Object} [options.sort] - { sortBy: string, order: 'asc' | 'desc' }
+   * @param {Object} [options.filters]
+   * @param {Object} [options.search]
+   * @param {Object} [options.pagination]
+   * @param {Object} [options.sort]
    */
   async findAll(options = {}) {
-    const { filters = {}, search = null, pagination = null, sort = null } = options;
     let result = [...this.items];
 
-    // Aplicar filtros exactos
-    for (const key in filters) {
-      const filterVal = filters[key];
-      result = result.filter(item => {
-        const val = item[key];
-        if (typeof val === 'string' && typeof filterVal === 'string') {
-          return val.toLowerCase() === filterVal.toLowerCase();
-        }
-        if (typeof val === 'boolean') {
-          return val === (filterVal === 'true');
-        }
-        return val === filterVal;
-      });
-    }
-
-    // Búsqueda por texto libre
-    if (search && search.query && Array.isArray(search.fields)) {
-      const q = search.query.toLowerCase();
-      result = result.filter(item =>
-        search.fields.some(field => {
-          const val = item[field];
-          if (typeof val === 'string') {
-            return val.toLowerCase().includes(q);
-          }
-          return false;
-        })
-      );
-    }
-
-    // Ordenamiento
-    if (sort && sort.sortBy) {
-      const { sortBy, order = 'asc' } = sort;
-      result.sort((a, b) => {
-        const aVal = a[sortBy];
-        const bVal = b[sortBy];
-        if (aVal == null && bVal != null) return order === 'asc' ? -1 : 1;
-        if (aVal != null && bVal == null) return order === 'asc' ? 1 : -1;
-        if (aVal == null && bVal == null) return 0;
-
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-
-        return order === 'asc'
-          ? (aVal < bVal ? -1 : aVal > bVal ? 1 : 0)
-          : (aVal > bVal ? -1 : aVal < bVal ? 1 : 0);
-      });
-    }
-
-    // Paginación
-    if (pagination) {
-      const offset = pagination.offset ?? 0;
-      const limit = pagination.limit ?? result.length;
-      result = result.slice(offset, offset + limit);
-    }
+    result = applyFilters(result, options.filters);
+    result = applySearch(result, options.search);
+    result = applySort(result, options.sort);
+    result = applyPagination(result, options.pagination);
 
     return result;
   }

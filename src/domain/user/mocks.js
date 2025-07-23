@@ -1,6 +1,6 @@
 import { User } from '../../domain/user/user.js';
 
-export const mockUsers = [
+export const mockUser = [
   new User({
     id: '1',
     active: true,
